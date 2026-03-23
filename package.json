@@ -1,0 +1,31 @@
+{
+  "name": "poke-gate",
+  "version": "0.0.1",
+  "description": "Expose your machine to your Poke AI assistant via MCP tunnel",
+  "type": "module",
+  "bin": {
+    "poke-gate": "./bin/poke-gate.js"
+  },
+  "scripts": {
+    "start": "node src/app.js"
+  },
+  "keywords": [
+    "poke",
+    "mcp",
+    "tunnel",
+    "shell",
+    "terminal",
+    "ai",
+    "cli",
+    "remote",
+    "os"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "poke": "^0.4.2"
+  }
+}
