@@ -2,7 +2,7 @@ import http from "node:http";
 import { execSync, exec } from "node:child_process";
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { hostname, platform, arch, uptime, totalmem, freemem, homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, extname } from "node:path";
 
 const SERVER_INFO = { name: "poke-gate", version: "0.0.1" };
 
@@ -78,6 +78,30 @@ const TOOLS = [
     name: "system_info",
     description: "Get system information: OS, hostname, architecture, uptime, memory, and home directory.",
     inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "read_image",
+    description:
+      "Read an image or binary file and return it as base64-encoded data. " +
+      "Supports png, jpg, jpeg, gif, webp, pdf, and any other binary file. " +
+      "Returns the base64 string and MIME type.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Absolute or relative path to the image/binary file" },
+      },
+      required: ["path"],
+    },
+  },
+  {
+    name: "take_screenshot",
+    description: "Take a screenshot of the user's screen and save it to a file. Returns the file path. Requires screen recording permission on macOS.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "File path to save the screenshot (optional, defaults to ~/Desktop/screenshot-<timestamp>.png)" },
+      },
+    },
   },
 ];
 
@@ -173,6 +197,54 @@ function handleToolCall(name, args) {
       };
       logTool(name, args);
       return { content: [{ type: "text", text: JSON.stringify(info, null, 2) }] };
+    }
+
+    case "read_image": {
+      try {
+        const p = resolve(args.path.replace(/^~/, homedir()));
+        const ext = extname(p).toLowerCase().slice(1);
+        const mimeMap = {
+          png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+          gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
+          pdf: "application/pdf", ico: "image/x-icon", bmp: "image/bmp",
+        };
+        const mimeType = mimeMap[ext] || "application/octet-stream";
+        const buf = readFileSync(p);
+        const base64 = buf.toString("base64");
+        logTool(name, args);
+
+        if (mimeType.startsWith("image/")) {
+          return {
+            content: [
+              { type: "image", data: base64, mimeType },
+              { type: "text", text: `Image: ${p} (${mimeType}, ${buf.length} bytes)` },
+            ],
+          };
+        }
+        return {
+          content: [
+            { type: "text", text: `File: ${p} (${mimeType}, ${buf.length} bytes)\nBase64: ${base64.slice(0, 200)}${base64.length > 200 ? "..." : ""}` },
+          ],
+        };
+      } catch (err) {
+        const r = { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        logTool(name, args, r);
+        return r;
+      }
+    }
+
+    case "take_screenshot": {
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      const dest = args.path
+        ? resolve(args.path.replace(/^~/, homedir()))
+        : join(homedir(), "Desktop", `screenshot-${ts}.png`);
+      logTool(name, { path: dest });
+      return runCommand(`/usr/sbin/screencapture -x "${dest}"`, homedir()).then((result) => {
+        if (result.exitCode === 0) {
+          return { content: [{ type: "text", text: `Screenshot saved to ${dest}` }] };
+        }
+        return { content: [{ type: "text", text: `Screenshot failed: ${result.stderr || "unknown error"}` }], isError: true };
+      });
     }
 
     default:
