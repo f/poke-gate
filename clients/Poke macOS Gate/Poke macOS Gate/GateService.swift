@@ -1,6 +1,5 @@
 import Foundation
 import Combine
-import ScreenCaptureKit
 
 @MainActor
 class GateService: ObservableObject {
@@ -35,19 +34,8 @@ class GateService: ObservableObject {
     func autoStartIfNeeded() {
         guard !hasAutoStarted else { return }
         hasAutoStarted = true
-        requestScreenCapturePermission()
         if hasAPIKey {
             start()
-        }
-    }
-
-    private func requestScreenCapturePermission() {
-        Task {
-            do {
-                _ = try await SCShareableContent.current
-            } catch {
-                appendLog("Screen capture permission not granted yet.")
-            }
         }
     }
 

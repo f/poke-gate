@@ -1,5 +1,6 @@
 import { startMcpServer, enableLogging } from "./mcp-server.js";
 import { startTunnel } from "./tunnel.js";
+import { Poke } from "poke";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -50,6 +51,7 @@ async function main() {
           case "connected":
             log(`Tunnel connected (${data.connectionId})`);
             log("Ready — your Poke agent can now access this machine.");
+            notifyPoke(data.connectionId);
             break;
           case "disconnected":
             log("Tunnel disconnected. Reconnecting...");
@@ -69,6 +71,20 @@ async function main() {
   } catch (err) {
     log(`Failed to connect: ${err.message}`);
     process.exit(1);
+  }
+}
+
+async function notifyPoke(connectionId) {
+  try {
+    const poke = new Poke({ apiKey: API_KEY });
+    await poke.sendMessage(
+      `Poke macOS Gate is connected. Tunnel ID: ${connectionId}. ` +
+      `You now have access to this machine's terminal, files, and screen. ` +
+      `Use the available tools (run_command, read_file, write_file, list_directory, system_info, read_image, take_screenshot) to help the user.`
+    );
+    log("Notified Poke agent about connection.");
+  } catch (err) {
+    log(`Failed to notify Poke: ${err.message}`);
   }
 }
 
