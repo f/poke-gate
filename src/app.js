@@ -1,8 +1,11 @@
-import { startMcpServer } from "./mcp-server.js";
+import { startMcpServer, enableLogging } from "./mcp-server.js";
 import { startTunnel } from "./tunnel.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+
+const verbose = process.argv.includes("--verbose") || process.argv.includes("-v");
+enableLogging(verbose);
 
 function resolveToken() {
   if (process.env.POKE_API_KEY) return process.env.POKE_API_KEY;

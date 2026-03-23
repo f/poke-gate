@@ -8,6 +8,23 @@ const SERVER_INFO = { name: "poke-gate", version: "0.0.1" };
 
 const COMMAND_TIMEOUT = 30_000;
 
+let logEnabled = false;
+
+export function enableLogging(enabled) {
+  logEnabled = enabled;
+}
+
+function logTool(name, args, result) {
+  if (!logEnabled) return;
+  const ts = new Date().toISOString().slice(11, 19);
+  console.log(`[${ts}] tool: ${name}`);
+  if (name === "run_command") console.log(`[${ts}]   $ ${args.command}${args.cwd ? ` (in ${args.cwd})` : ""}`);
+  else if (name === "read_file") console.log(`[${ts}]   read: ${args.path}`);
+  else if (name === "write_file") console.log(`[${ts}]   write: ${args.path}`);
+  else if (name === "list_directory") console.log(`[${ts}]   ls: ${args.path || "~"}`);
+  if (result?.isError) console.log(`[${ts}]   error`);
+}
+
 const TOOLS = [
   {
     name: "run_command",
@@ -85,18 +102,26 @@ function runCommand(command, cwd) {
 function handleToolCall(name, args) {
   switch (name) {
     case "run_command": {
-      return runCommand(args.command, args.cwd).then((result) => ({
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      }));
+      logTool(name, args);
+      return runCommand(args.command, args.cwd).then((result) => {
+        const r = { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        if (result.exitCode !== 0) r.isError = true;
+        logTool(name, args, r);
+        return r;
+      });
     }
 
     case "read_file": {
       try {
         const p = resolve(args.path.replace(/^~/, homedir()));
         const text = readFileSync(p, "utf-8");
-        return { content: [{ type: "text", text: text.slice(0, 100_000) }] };
+        const r = { content: [{ type: "text", text: text.slice(0, 100_000) }] };
+        logTool(name, args, r);
+        return r;
       } catch (err) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        const r = { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        logTool(name, args, r);
+        return r;
       }
     }
 
@@ -104,26 +129,34 @@ function handleToolCall(name, args) {
       try {
         const p = resolve(args.path.replace(/^~/, homedir()));
         writeFileSync(p, args.content);
-        return { content: [{ type: "text", text: `Written to ${p}` }] };
+        const r = { content: [{ type: "text", text: `Written to ${p}` }] };
+        logTool(name, args, r);
+        return r;
       } catch (err) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        const r = { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        logTool(name, args, r);
+        return r;
       }
     }
 
     case "list_directory": {
       try {
         const dir = resolve((args.path || "~").replace(/^~/, homedir()));
-        const entries = readdirSync(dir).map((name) => {
+        const entries = readdirSync(dir).map((entry) => {
           try {
-            const s = statSync(join(dir, name));
-            return `${s.isDirectory() ? "d" : "-"} ${name}`;
+            const s = statSync(join(dir, entry));
+            return `${s.isDirectory() ? "d" : "-"} ${entry}`;
           } catch {
-            return `? ${name}`;
+            return `? ${entry}`;
           }
         });
-        return { content: [{ type: "text", text: entries.join("\n") }] };
+        const r = { content: [{ type: "text", text: entries.join("\n") }] };
+        logTool(name, args, r);
+        return r;
       } catch (err) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        const r = { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        logTool(name, args, r);
+        return r;
       }
     }
 
@@ -138,6 +171,7 @@ function handleToolCall(name, args) {
         homeDir: homedir(),
         nodeVersion: process.version,
       };
+      logTool(name, args);
       return { content: [{ type: "text", text: JSON.stringify(info, null, 2) }] };
     }
 
