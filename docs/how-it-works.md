@@ -5,14 +5,13 @@ Poke Gate bridges your machine to Poke's cloud so your AI assistant can execute 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    A["You message Poke\nfrom iMessage / Telegram / SMS"] --> B["Poke Agent"]
-    B --> C["Agent decides to use a tool"]
-    C --> D["MCP Tunnel (WebSocket)"]
-    D --> E["Poke Gate on your Mac"]
-    E --> F["Executes tool locally"]
-    F --> D
-    D --> B
+flowchart LR
+    A["You (iMessage)"] --> B["Poke Agent"]
+    B --> C["MCP Tunnel"]
+    C --> D["Poke Gate"]
+    D --> E["Executes locally"]
+    E --> C
+    C --> B
     B --> A
 ```
 

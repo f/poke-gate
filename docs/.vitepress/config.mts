@@ -38,7 +38,8 @@ export default withMermaid(
             { text: 'Overview', link: '/agents/' },
             { text: 'Creating Agents', link: '/agents/creating' },
             { text: 'Installing Agents', link: '/agents/installing' },
-            { text: 'Beeper Example', link: '/agents/beeper' },
+            { text: 'Community Agents', link: '/agents/community' },
+          { text: 'Beeper Example', link: '/agents/beeper' },
           { text: 'Sharing Agents', link: '/agents/sharing' },
           ]
         },

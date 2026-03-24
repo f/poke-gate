@@ -26,6 +26,9 @@ class AgentsViewModel: ObservableObject {
     @Published var editorContent: String = ""
     @Published var showingEnv: Bool = false
 
+    private var fileWatcher: DispatchSourceFileSystemObject?
+    private var dirFD: Int32 = -1
+
     private var agentsDir: URL {
         let configDir: URL
         if let xdg = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"] {
@@ -37,6 +40,38 @@ class AgentsViewModel: ObservableObject {
         return configDir
             .appendingPathComponent("poke-gate")
             .appendingPathComponent("agents")
+    }
+
+    func startWatching() {
+        stopWatching()
+        let dir = agentsDir
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        dirFD = open(dir.path, O_EVTONLY)
+        guard dirFD >= 0 else { return }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: dirFD,
+            eventMask: [.write, .rename, .delete, .attrib],
+            queue: .main
+        )
+
+        source.setEventHandler { [weak self] in
+            self?.load()
+        }
+
+        source.setCancelHandler { [weak self] in
+            if let fd = self?.dirFD, fd >= 0 { close(fd) }
+            self?.dirFD = -1
+        }
+
+        source.resume()
+        fileWatcher = source
+    }
+
+    func stopWatching() {
+        fileWatcher?.cancel()
+        fileWatcher = nil
     }
 
     func load() {
@@ -227,7 +262,13 @@ struct AgentsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onAppear { viewModel.load() }
+        .onAppear {
+            viewModel.load()
+            viewModel.startWatching()
+        }
+        .onDisappear {
+            viewModel.stopWatching()
+        }
     }
 }
 
