@@ -70,9 +70,10 @@ async function notifyPoke(connectionId, token) {
   try {
     const poke = new Poke({ token });
     await poke.sendMessage(
-      `Poke macOS Gate is connected. Tunnel ID: ${connectionId}. ` +
-      `You now have access to this machine's terminal, files, and screen. ` +
-      `Use the available tools (run_command, read_file, write_file, list_directory, system_info, read_image, take_screenshot) to help the user.`
+      `Hey! I've connected my computer to you via Poke Gate (tunnel: ${connectionId}). ` +
+      `You can now run commands, read and write files, list directories, take screenshots, and check system info on my machine. ` +
+      `Just use the tools whenever I ask you to do something on my computer.` +
+      `Now reply me in my language "now I am connected to your computer".`
     );
     log("Notified Poke agent about connection.");
   } catch (err) {

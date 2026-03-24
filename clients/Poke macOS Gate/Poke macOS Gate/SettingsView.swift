@@ -5,46 +5,105 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Poke Gate Settings")
-                .font(.headline)
-
+        VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
-                Label("Authentication uses Poke OAuth", systemImage: "checkmark.shield")
-                    .font(.subheadline)
+                Text("AUTHENTICATION")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
 
-                Text("Poke Gate signs in automatically when needed.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Image(systemName: service.hasPokeLoginCredentials
+                          ? "checkmark.shield.fill" : "shield.slash")
+                        .foregroundStyle(service.hasPokeLoginCredentials ? .green : .orange)
+                        .font(.title3)
 
-                Text("If you're not signed in yet, a browser window will open during connection.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(service.hasPokeLoginCredentials
+                             ? "Signed in via Poke"
+                             : "Not signed in")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
 
-                if service.hasPokeLoginCredentials {
-                    Label("Existing Poke session detected", systemImage: "person.crop.circle.badge.checkmark")
-                        .foregroundStyle(.green)
+                        if service.hasPokeLoginCredentials {
+                            Text("Your Poke session is active.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Run this command in Terminal to sign in:")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.5))
+                .cornerRadius(8)
+
+                if !service.hasPokeLoginCredentials {
+                    Button {
+                        service.runPokeLogin()
+                    } label: {
+                        Label("Sign in with Poke", systemImage: "person.crop.circle.badge.plus")
+                    }
+                    .controlSize(.large)
+
+                    Text("Opens a browser window to sign in.")
                         .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("CONNECTION")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(connectionColor)
+                        .frame(width: 8, height: 8)
+
+                    Text(service.status.rawValue)
+                        .font(.subheadline)
+
+                    Spacer()
+
+                    Button {
+                        service.restart()
+                    } label: {
+                        Label("Reconnect", systemImage: "arrow.counterclockwise")
+                            .font(.caption)
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.5))
+                .cornerRadius(8)
+            }
 
             HStack {
+                Spacer()
                 Button("Close") {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button("Reconnect") {
-                    dismiss()
-                    service.restart()
-                }
-                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
         .frame(width: 380)
+    }
+
+    private var connectionColor: Color {
+        switch service.status {
+        case .connected: .green
+        case .starting, .disconnected: .yellow
+        case .error: .red
+        case .stopped: .gray
+        }
     }
 }

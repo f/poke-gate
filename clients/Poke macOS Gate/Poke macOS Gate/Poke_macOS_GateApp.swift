@@ -6,19 +6,25 @@ struct Poke_macOS_GateApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarContent(service: service)
+            PopoverContent(service: service)
                 .onAppear { service.autoStartIfNeeded() }
         } label: {
             Image(systemName: menuBarIcon)
         }
+        .menuBarExtraStyle(.window)
 
         Window("Logs", id: "logs") {
             LogsView(service: service)
         }
-        .defaultSize(width: 480, height: 320)
+        .defaultSize(width: 560, height: 400)
 
         Window("Settings", id: "settings") {
             SettingsView(service: service)
+        }
+        .windowResizability(.contentSize)
+
+        Window("About", id: "about") {
+            AboutView()
         }
         .windowResizability(.contentSize)
     }
@@ -33,77 +39,126 @@ struct Poke_macOS_GateApp: App {
     }
 }
 
-struct MenuBarContent: View {
+struct PopoverContent: View {
     @ObservedObject var service: GateService
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Label(statusText, systemImage: statusIcon)
-            .foregroundStyle(statusColor)
+        VStack(spacing: 0) {
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 10, height: 10)
 
-        if service.status == .connected {
-            Text("This machine is now accessible via Poke.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text("Ask your Poke to run commands or read files.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        } else if service.status == .starting {
-            Text("Establishing connection…")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        } else if service.status == .error {
-            Text("Check Settings or view Logs for details.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
+                    Text(statusText)
+                        .font(.system(.body, weight: .medium))
 
-        Divider()
+                    Spacer()
+                }
 
-        Button("View Logs…") {
-            NSApp.activate(ignoringOtherApps: true)
-            openWindow(id: "logs")
-        }
-
-        Button("Settings…") {
-            NSApp.activate(ignoringOtherApps: true)
-            openWindow(id: "settings")
-        }
-
-        Divider()
-
-        if service.status == .connected || service.status == .starting || service.status == .disconnected {
-            Button("Restart") {
-                service.restart()
+                if service.status == .connected {
+                    Text("This machine is accessible via Poke. Ask your Poke to run commands or read files.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if service.status == .starting {
+                    Text("Establishing connection…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else if service.status == .error {
+                    Text("Check Logs for details.")
+                        .font(.caption)
+                        .foregroundStyle(.red.opacity(0.8))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
-        } else {
-            Button("Start") {
-                service.start()
+            .padding(12)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Recent activity")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+
+                if service.logs.isEmpty {
+                    Text("No activity yet")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(Array(service.logs.suffix(4).enumerated()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
             }
-        }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
 
-        Divider()
+            Divider()
 
-        Button("Quit Poke Gate") {
-            service.stop()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                NSApp.terminate(nil)
+            HStack(spacing: 12) {
+                ActionButton(icon: "text.alignleft", label: "Logs") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "logs")
+                }
+
+                ActionButton(icon: "gearshape", label: "Settings") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "settings")
+                }
+
+                if service.status == .connected || service.status == .starting || service.status == .disconnected {
+                    ActionButton(icon: "arrow.counterclockwise", label: "Restart") {
+                        service.restart()
+                    }
+                } else {
+                    ActionButton(icon: "play.fill", label: "Start") {
+                        service.start()
+                    }
+                }
+
+                Spacer()
+
+                ActionButton(icon: "xmark.circle", label: "Quit", tint: .secondary) {
+                    service.stop()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        NSApp.terminate(nil)
+                    }
+                }
             }
-        }
-        .keyboardShortcut("q")
+            .padding(12)
 
-        Divider()
+            Divider()
 
-        Text("Poke Gate v0.0.3")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        Text("Community project — not affiliated with Poke")
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-        Button("GitHub") {
-            NSWorkspace.shared.open(URL(string: "https://github.com/f/poke-gate")!)
+            HStack {
+                Button {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "about")
+                } label: {
+                    Text("Poke Gate v0.0.8")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text("Not affiliated with Poke")
+                    .font(.caption2)
+                    .foregroundStyle(.quaternary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
-        .font(.caption)
+        .frame(width: 320)
     }
 
     private var statusText: String {
@@ -120,21 +175,34 @@ struct MenuBarContent: View {
         }
     }
 
-    private var statusIcon: String {
-        switch service.status {
-        case .connected: "circle.fill"
-        case .starting, .disconnected: "circle.dotted"
-        case .error: "exclamationmark.circle.fill"
-        case .stopped: "circle"
-        }
-    }
-
     private var statusColor: Color {
         switch service.status {
         case .connected: .green
         case .starting, .disconnected: .yellow
         case .error: .red
-        case .stopped: .secondary
+        case .stopped: .gray.opacity(0.5)
         }
+    }
+}
+
+struct ActionButton: View {
+    let icon: String
+    let label: String
+    var tint: Color = .primary
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                Text(label)
+                    .font(.system(size: 9))
+            }
+            .foregroundStyle(tint)
+            .frame(width: 44, height: 36)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
