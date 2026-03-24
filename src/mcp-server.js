@@ -1,5 +1,5 @@
 import http from "node:http";
-import { execSync, exec } from "node:child_process";
+import { exec } from "node:child_process";
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { hostname, platform, arch, uptime, totalmem, freemem, homedir } from "node:os";
 import { join, resolve, extname } from "node:path";
@@ -108,7 +108,7 @@ const TOOLS = [
 function runCommand(command, cwd) {
   return new Promise((res) => {
     const dir = cwd || homedir();
-    const child = exec(command, {
+    exec(command, {
       cwd: dir,
       timeout: COMMAND_TIMEOUT,
       maxBuffer: 1024 * 1024,
@@ -348,7 +348,7 @@ export function startMcpServer(port = 0) {
               res.end();
             }
           }
-        } catch (err) {
+        } catch {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null }));
         }

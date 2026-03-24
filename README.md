@@ -94,7 +94,7 @@ From iMessage or Telegram, ask Poke:
 The menu bar app manages everything:
 
 - **Status** — green dot when connected, yellow when connecting, red on error
-- **Personalized** — shows "Connected to your Poke, [name]"
+- **Personalized** — shows "Connected to your Poke, <name>"
 - **Auto-start** — connects on launch if API key is saved
 - **Auto-restart** — reconnects automatically if the connection drops
 - **Settings** — paste your API key

@@ -48,7 +48,7 @@ async function main() {
 
   log("Connecting tunnel to Poke...");
   try {
-    const { info } = await startTunnel({
+    await startTunnel({
       apiKey: API_KEY,
       mcpUrl,
       onEvent: (type, data) => {

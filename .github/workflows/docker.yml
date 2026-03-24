@@ -1,0 +1,41 @@
+name: Build and push Docker image
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get tag
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/f/poke-gate:latest
+            ghcr.io/f/poke-gate:${{ steps.vars.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/f/poke-gate
+            org.opencontainers.image.description=Expose your machine to your Poke AI assistant via MCP tunnel
+            org.opencontainers.image.licenses=MIT
