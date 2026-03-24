@@ -309,7 +309,16 @@ async function promptEnvKeys(keys) {
   return values;
 }
 
+let schedulerRunning = false;
+const activeTimers = [];
+
 export function startAgentScheduler() {
+  if (schedulerRunning) {
+    log("Agent scheduler already running, skipping.");
+    return;
+  }
+  schedulerRunning = true;
+
   const agents = discoverAgents();
 
   if (agents.length === 0) {
@@ -328,8 +337,18 @@ export function startAgentScheduler() {
   for (const agent of agents) {
     runAgentProcess(agent);
 
-    setInterval(() => {
+    const timer = setInterval(() => {
       runAgentProcess(agent);
     }, agent.intervalMs);
+    activeTimers.push(timer);
   }
+}
+
+export function stopAgentScheduler() {
+  for (const timer of activeTimers) {
+    clearInterval(timer);
+  }
+  activeTimers.length = 0;
+  schedulerRunning = false;
+  log("Agent scheduler stopped.");
 }
