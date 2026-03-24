@@ -1,17 +1,11 @@
 /**
- * Beeper Agent — runs every 1 hour
- *
- * Fetches messages from the last hour via Beeper Desktop's local API,
- * groups them by sender, and sends a summary to your Poke agent.
- *
- * Setup:
- *   1. Copy this file to ~/.config/poke-gate/agents/beeper.1h.js
- *   2. Create ~/.config/poke-gate/agents/.env.beeper with:
- *        BEEPER_TOKEN=your_beeper_access_token
- *   3. Run: npx poke-gate run-agent beeper (to test)
- *
- * The token is from Beeper Desktop's local API (localhost:23373).
- * You can find it in Beeper Desktop > Settings > API.
+ * @agent beeper
+ * @name Beeper Message Digest
+ * @description Fetches messages from the last hour via Beeper Desktop and sends a summary to Poke.
+ * @interval 1h
+ * @env BEEPER_TOKEN - Beeper Desktop local API token (Settings > API)
+ * @env BEEPER_BASE_URL - (optional) Override default http://localhost:23373
+ * @author f
  */
 
 import { Poke, getToken } from "poke";

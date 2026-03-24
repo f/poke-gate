@@ -23,6 +23,33 @@ function parseInterval(token) {
   return ms;
 }
 
+function parseFrontmatter(filePath) {
+  try {
+    const content = readFileSync(filePath, "utf-8");
+    const match = content.match(/\/\*\*[\s\S]*?\*\//);
+    if (!match) return {};
+    const block = match[0];
+    const meta = {};
+    const lines = block.split("\n");
+    for (const line of lines) {
+      const m = line.match(/@(\w+)\s+(.*)/);
+      if (m) {
+        const key = m[1].trim();
+        const value = m[2].replace(/\*\/$/, "").trim();
+        if (key === "env") {
+          if (!meta.env) meta.env = [];
+          meta.env.push(value);
+        } else {
+          meta[key] = value;
+        }
+      }
+    }
+    return meta;
+  } catch {
+    return {};
+  }
+}
+
 function parseEnvFile(filePath) {
   const env = {};
   if (!existsSync(filePath)) return env;
@@ -65,13 +92,17 @@ export function discoverAgents() {
       continue;
     }
 
+    const agentPath = join(AGENTS_DIR, file);
+    const meta = parseFrontmatter(agentPath);
+
     agents.push({
       name,
       file,
-      path: join(AGENTS_DIR, file),
+      path: agentPath,
       intervalToken,
       intervalMs,
       envFile: join(AGENTS_DIR, `.env.${name}`),
+      meta,
     });
   }
 
@@ -212,7 +243,8 @@ export function startAgentScheduler() {
   for (const agent of agents) {
     const interval = agent.intervalToken;
     const hasEnv = existsSync(agent.envFile);
-    log(`  ${agent.name} (every ${interval}${hasEnv ? ", has .env" : ""})`);
+    const desc = agent.meta.name || agent.name;
+    log(`  ${desc} (every ${interval}${hasEnv ? ", has .env" : ""})`);
   }
 
   for (const agent of agents) {
