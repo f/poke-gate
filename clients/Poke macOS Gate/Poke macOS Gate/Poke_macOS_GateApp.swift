@@ -23,6 +23,11 @@ struct Poke_macOS_GateApp: App {
         }
         .windowResizability(.contentSize)
 
+        Window("Agents", id: "agents") {
+            AgentsView()
+        }
+        .defaultSize(width: 700, height: 480)
+
         Window("About", id: "about") {
             AboutView()
         }
@@ -108,6 +113,11 @@ struct PopoverContent: View {
                 ActionButton(icon: "text.alignleft", label: "Logs") {
                     NSApp.activate(ignoringOtherApps: true)
                     openWindow(id: "logs")
+                }
+
+                ActionButton(icon: "bolt.fill", label: "Agents") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "agents")
                 }
 
                 ActionButton(icon: "gearshape", label: "Settings") {

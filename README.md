@@ -137,6 +137,10 @@ Config is stored at `~/.config/poke-gate/config.json`.
 
 ## Agents
 
+<p align="center">
+  <img src="assets/screenshots/agents-editor.png" width="600" alt="Agents Editor">
+</p>
+
 Agents are scheduled scripts that run automatically in the background. They live in `~/.config/poke-gate/agents/` and follow a simple naming convention:
 
 ```
@@ -238,16 +242,16 @@ Only run Poke Gate on machines and networks you trust.
 clients/
   Poke macOS Gate/       macOS menu bar app (SwiftUI)
 bin/
-  poke-gate.js           CLI entry point, run-agent subcommand
+  poke-gate.js           CLI entry point, run-agent + agent get subcommands
 src/
   app.js                 Startup: MCP server + tunnel + agent scheduler
-  agents.js              Agent discovery, scheduling, and runner
+  agents.js              Agent discovery, scheduling, env loading, download
   mcp-server.js          JSON-RPC MCP handler with OS tools
   tunnel.js              PokeTunnel wrapper
 examples/
   agents/
-    beeper.1h.js         Example: Beeper message digest
-    .env.beeper          Example env file
+    beeper.1h.js         Example: Beeper message digest agent
+    .env.beeper          Example env file for beeper agent
 ```
 
 ## Credits
