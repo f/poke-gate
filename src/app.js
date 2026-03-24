@@ -1,5 +1,6 @@
 import { startMcpServer, enableLogging } from "./mcp-server.js";
 import { startTunnel } from "./tunnel.js";
+import { startAgentScheduler } from "./agents.js";
 import { Poke, isLoggedIn, login, getToken } from "poke";
 
 const verbose = process.argv.includes("--verbose") || process.argv.includes("-v");
@@ -44,6 +45,7 @@ async function main() {
             log(`Tunnel connected (${data.connectionId})`);
             log("Ready — your Poke agent can now access this machine.");
             notifyPoke(data.connectionId, token);
+            startAgentScheduler();
             break;
           case "disconnected":
             log("Tunnel disconnected. Reconnecting...");
