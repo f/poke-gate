@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Poke Gate
-  text: Your Mac, controlled by AI — from anywhere.
-  tagline: Give your Poke AI assistant access to your machine. Run commands, read files, take screenshots — all from iMessage, Telegram, or SMS.
+  text: A two-way bridge between your Mac and your AI.
+  tagline: Poke pulls from your Mac when you ask. Your Mac pushes to Poke when something happens. Run commands, read files, take screenshots — and automate it all with Agents.
   image:
     src: /logo.png
     alt: Poke Gate

@@ -25,6 +25,8 @@ class AgentsViewModel: ObservableObject {
     @Published var selectedAgent: AgentFile?
     @Published var editorContent: String = ""
     @Published var showingEnv: Bool = false
+    @Published var isRunning: Bool = false
+    @Published var lastRunOutput: String = ""
 
     private var fileWatcher: DispatchSourceFileSystemObject?
     private var dirFD: Int32 = -1
@@ -108,15 +110,20 @@ class AgentsViewModel: ObservableObject {
     }
 
     func select(_ agent: AgentFile) {
-        selectedAgent = agent
-        showingEnv = false
-        loadContent()
+        DispatchQueue.main.async {
+            self.selectedAgent = agent
+            self.showingEnv = false
+            self.loadContent()
+        }
     }
 
     func loadContent() {
         guard let agent = selectedAgent else { return }
         let url = showingEnv ? agent.envPath : agent.path
-        editorContent = (try? String(contentsOf: url, encoding: .utf8)) ?? (showingEnv ? "# No .env file yet\n" : "")
+        let content = (try? String(contentsOf: url, encoding: .utf8)) ?? (showingEnv ? "# No .env file yet\n" : "")
+        DispatchQueue.main.async {
+            self.editorContent = content
+        }
     }
 
     func save() {
@@ -166,6 +173,45 @@ class AgentsViewModel: ObservableObject {
 
         if let newAgent = agents.first(where: { $0.agentId == name }) {
             select(newAgent)
+        }
+    }
+
+    func runAgent(_ agent: AgentFile) {
+        guard !isRunning else { return }
+        isRunning = true
+        lastRunOutput = ""
+
+        let fullPath = GateService().shellPath()
+        let proc = Process()
+        let pipe = Pipe()
+
+        proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        proc.arguments = ["-c", "npx -y poke-gate run-agent \(agent.agentId)"]
+        proc.environment = ["HOME": NSHomeDirectory(), "PATH": fullPath]
+        proc.standardOutput = pipe
+        proc.standardError = pipe
+        proc.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+
+        let handle = pipe.fileHandleForReading
+        handle.readabilityHandler = { [weak self] fh in
+            let data = fh.availableData
+            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
+            DispatchQueue.main.async {
+                self?.lastRunOutput += text
+            }
+        }
+
+        proc.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.isRunning = false
+            }
+        }
+
+        do {
+            try proc.run()
+        } catch {
+            isRunning = false
+            lastRunOutput = "Failed to run: \(error.localizedDescription)"
         }
     }
 
@@ -301,6 +347,15 @@ struct AgentDetailView: View {
                             }
                         }
                 }
+
+                Button {
+                    viewModel.runAgent(agent)
+                } label: {
+                    Label(viewModel.isRunning ? "Running…" : "Run", systemImage: "play.fill")
+                        .font(.caption)
+                }
+                .disabled(viewModel.isRunning)
+                .padding(.leading, 4)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

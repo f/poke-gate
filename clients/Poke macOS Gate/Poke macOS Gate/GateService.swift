@@ -32,12 +32,13 @@ class GateService: ObservableObject {
 
     func runPokeLogin() {
         let fullPath = shellPath()
+        let npxBin = findNpx()
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        proc.arguments = ["-c", "npx -y poke@latest login"]
+        proc.arguments = ["-c", "\(npxBin) -y poke@latest login"]
         proc.environment = ["HOME": NSHomeDirectory(), "PATH": fullPath]
         try? proc.run()
-        appendLog("Launched poke login — check your browser.")
+        appendLog("Launched poke login (npx: \(npxBin)) — check your browser.")
     }
 
     func autoStartIfNeeded() {
@@ -90,19 +91,82 @@ class GateService: ObservableObject {
         }
     }
 
-    private func shellPath() -> String {
-        let loginShell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-        let pathProc = Process()
-        let pathPipe = Pipe()
-        pathProc.executableURL = URL(fileURLWithPath: loginShell)
-        pathProc.arguments = ["-ilc", "echo $PATH"]
-        pathProc.standardOutput = pathPipe
-        pathProc.standardError = FileHandle.nullDevice
-        pathProc.environment = ["HOME": NSHomeDirectory()]
-        try? pathProc.run()
-        pathProc.waitUntilExit()
-        let data = pathPipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    func shellPath() -> String {
+        let home = NSHomeDirectory()
+        let fallback = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
+
+        // Try multiple shells/strategies to get PATH
+        let strategies: [(String, [String])] = [
+            ("/bin/zsh", ["-ilc", "echo $PATH"]),
+            ("/bin/zsh", ["-lc", "echo $PATH"]),
+            ("/bin/bash", ["-lc", "echo $PATH"]),
+        ]
+
+        for (shell, args) in strategies {
+            let proc = Process()
+            let pipe = Pipe()
+            proc.executableURL = URL(fileURLWithPath: shell)
+            proc.arguments = args
+            proc.standardOutput = pipe
+            proc.standardError = FileHandle.nullDevice
+            proc.environment = ["HOME": home]
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+                if proc.terminationStatus == 0 {
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    if let path = String(data: data, encoding: .utf8)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                       !path.isEmpty {
+                        return path
+                    }
+                }
+            } catch {
+                continue
+            }
+        }
+
+        // Fallback: build PATH from common locations
+        var paths = fallback.split(separator: ":").map(String.init)
+
+        let commonDirs = [
+            "\(home)/.nvm/versions/node",
+            "\(home)/.volta/bin",
+            "\(home)/.fnm/aliases/default/bin",
+            "\(home)/.local/bin",
+            "\(home)/.cargo/bin",
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+        ]
+
+        for dir in commonDirs {
+            if FileManager.default.fileExists(atPath: dir) {
+                if dir.contains(".nvm") {
+                    // Find the latest node version in nvm
+                    if let versions = try? FileManager.default.contentsOfDirectory(atPath: dir) {
+                        if let latest = versions.sorted().last {
+                            let binPath = "\(dir)/\(latest)/bin"
+                            if !paths.contains(binPath) { paths.insert(binPath, at: 0) }
+                        }
+                    }
+                } else if !paths.contains(dir) {
+                    paths.insert(dir, at: 0)
+                }
+            }
+        }
+
+        return paths.joined(separator: ":")
+    }
+
+    private func findNpx() -> String {
+        let path = shellPath()
+        for dir in path.split(separator: ":") {
+            let npxPath = "\(dir)/npx"
+            if FileManager.default.isExecutableFile(atPath: npxPath) {
+                return npxPath
+            }
+        }
+        return "npx"
     }
 
     private func launchProcess() {
@@ -112,15 +176,17 @@ class GateService: ObservableObject {
         appendLog("Starting poke-gate…")
 
         let fullPath = shellPath()
+        let npxBin = findNpx()
+
+        appendLog("Using npx at: \(npxBin)")
 
         let proc = Process()
         let pipe = Pipe()
 
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        proc.arguments = ["-c", "npx -y poke-gate --verbose"]
+        proc.arguments = ["-c", "\(npxBin) -y poke-gate --verbose"]
         proc.environment = ProcessInfo.processInfo.environment.merging(
             [
-                "POKE_API_KEY": resolveToken() ?? "",
                 "PATH": fullPath,
             ],
             uniquingKeysWith: { _, new in new }
