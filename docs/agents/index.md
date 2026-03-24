@@ -9,15 +9,16 @@ Agents are **push-only** — they send data to Poke, but Poke cannot reach back 
 :::
 
 ```mermaid
-flowchart LR
-    subgraph YourMac ["Your Mac"]
-        Agent["Agent script"]
-        Local["Local data source"]
-        Local -->|reads| Agent
+flowchart TB
+    subgraph mac ["Your Mac"]
+        direction TB
+        Source["Local data source\nBeeper, files, APIs, logs"]
+        Script["Agent script\nruns on a schedule"]
+        Source -->|reads| Script
     end
 
-    Agent -->|sendMessage| Poke["Poke Agent"]
-    Poke -->|replies| You["You"]
+    Script -->|sendMessage| Poke["Poke Agent"]
+    Poke -->|replies via iMessage,\nTelegram, or SMS| You["You"]
 ```
 
 **Example:** A Beeper agent runs every hour, fetches your unread messages, and sends a digest to Poke. Now Poke knows who messaged you — and can answer "did anyone text me?" without needing your machine in real time.
