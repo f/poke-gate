@@ -1,45 +1,33 @@
 import { startMcpServer, enableLogging } from "./mcp-server.js";
 import { startTunnel } from "./tunnel.js";
-import { Poke } from "poke";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
+import { Poke, isLoggedIn, login, getToken } from "poke";
 
 const verbose = process.argv.includes("--verbose") || process.argv.includes("-v");
 enableLogging(verbose);
-
-function resolveToken() {
-  if (process.env.POKE_API_KEY) return process.env.POKE_API_KEY;
-
-  const configDir = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-
-  try {
-    const cfg = JSON.parse(readFileSync(join(configDir, "poke-gate", "config.json"), "utf-8"));
-    if (cfg.apiKey) return cfg.apiKey;
-  } catch {}
-
-  try {
-    const creds = JSON.parse(readFileSync(join(configDir, "poke", "credentials.json"), "utf-8"));
-    if (creds.token) return creds.token;
-  } catch {}
-
-  return null;
-}
 
 function log(msg) {
   const ts = new Date().toISOString().slice(11, 19);
   console.log(`[${ts}] ${msg}`);
 }
 
-const API_KEY = resolveToken();
+async function ensureAuthenticated() {
+  if (!isLoggedIn()) {
+    log("Signing in to Poke...");
+    await login();
+  }
 
-if (!API_KEY) {
-  console.error("No credentials found. Run: npx poke-gate");
-  process.exit(1);
+  const token = getToken();
+  if (!token) {
+    throw new Error("Authentication failed: no token returned by Poke SDK.");
+  }
+
+  return token;
 }
 
 async function main() {
   log("poke-gate starting...");
+
+  const token = await ensureAuthenticated();
 
   const { port } = await startMcpServer();
   log(`MCP server on port ${port}`);
@@ -49,14 +37,13 @@ async function main() {
   log("Connecting tunnel to Poke...");
   try {
     await startTunnel({
-      apiKey: API_KEY,
       mcpUrl,
       onEvent: (type, data) => {
         switch (type) {
           case "connected":
             log(`Tunnel connected (${data.connectionId})`);
             log("Ready — your Poke agent can now access this machine.");
-            notifyPoke(data.connectionId);
+            notifyPoke(data.connectionId, token);
             break;
           case "disconnected":
             log("Tunnel disconnected. Reconnecting...");
@@ -79,9 +66,9 @@ async function main() {
   }
 }
 
-async function notifyPoke(connectionId) {
+async function notifyPoke(connectionId, token) {
   try {
-    const poke = new Poke({ apiKey: API_KEY });
+    const poke = new Poke({ token });
     await poke.sendMessage(
       `Poke macOS Gate is connected. Tunnel ID: ${connectionId}. ` +
       `You now have access to this machine's terminal, files, and screen. ` +

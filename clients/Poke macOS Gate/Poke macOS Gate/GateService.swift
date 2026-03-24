@@ -21,36 +21,20 @@ class GateService: ObservableObject {
     private var shouldRestart = true
     private let maxLogs = 200
 
-    var apiKey: String {
-        get { loadAPIKey() ?? "" }
-        set { saveAPIKey(newValue) }
-    }
-
-    var hasAPIKey: Bool {
-        resolveToken() != nil
-    }
-
     func autoStartIfNeeded() {
         guard !hasAutoStarted else { return }
         hasAutoStarted = true
-        if hasAPIKey {
-            start()
-        }
+        start()
     }
 
     func start() {
-        guard hasAPIKey else {
-            status = .error
-            appendLog("No API key configured.")
-            return
-        }
         shouldRestart = true
         fetchUserName()
         launchProcess()
     }
 
     private func fetchUserName() {
-        guard let key = loadAPIKey() else { return }
+        guard let key = loadPokeLoginToken() else { return }
         Task {
             let url = URL(string: "https://poke.com/api/v1/user/profile")!
             var request = URLRequest(url: url)
@@ -95,6 +79,14 @@ class GateService: ObservableObject {
         return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     }
 
+    private func resolveLaunchCommand() -> (command: String, workingDirectory: URL) {
+        if let localRoot = ProcessInfo.processInfo.environment["POKE_GATE_DEV_ROOT"], !localRoot.isEmpty {
+            return ("node src/app.js --verbose", URL(fileURLWithPath: localRoot))
+        }
+
+        return ("npx -y poke-gate --verbose", FileManager.default.homeDirectoryForCurrentUser)
+    }
+
     private func launchProcess() {
         killProcess()
 
@@ -105,19 +97,25 @@ class GateService: ObservableObject {
 
         let proc = Process()
         let pipe = Pipe()
+        let launch = resolveLaunchCommand()
 
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        proc.arguments = ["-c", "npx -y poke-gate --verbose"]
+        proc.arguments = ["-c", launch.command]
         proc.environment = ProcessInfo.processInfo.environment.merging(
             [
-                "POKE_API_KEY": resolveToken() ?? "",
                 "PATH": fullPath,
             ],
             uniquingKeysWith: { _, new in new }
         )
         proc.standardOutput = pipe
         proc.standardError = pipe
-        proc.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+        proc.currentDirectoryURL = launch.workingDirectory
+
+        if launch.command.hasPrefix("node ") {
+            appendLog("Launching local source from \(launch.workingDirectory.path)")
+        } else {
+            appendLog("Launching published CLI via npx")
+        }
 
         let handle = pipe.fileHandleForReading
         handle.readabilityHandler = { [weak self] fh in
@@ -192,41 +190,7 @@ class GateService: ObservableObject {
         }
     }
 
-    // MARK: - Config
-
-    private var configURL: URL {
-        let configDir: URL
-        if let xdg = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"] {
-            configDir = URL(fileURLWithPath: xdg)
-        } else {
-            configDir = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".config")
-        }
-        return configDir
-            .appendingPathComponent("poke-gate")
-            .appendingPathComponent("config.json")
-    }
-
-    private func loadAPIKey() -> String? {
-        guard let data = try? Data(contentsOf: configURL),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let key = json["apiKey"] as? String else {
-            return nil
-        }
-        return key
-    }
-
-    private func saveAPIKey(_ key: String) {
-        let dir = configURL.deletingLastPathComponent()
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let json: [String: Any] = ["apiKey": key]
-        if let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) {
-            try? data.write(to: configURL)
-        }
-        objectWillChange.send()
-    }
-
-    // MARK: - Poke Login Credentials
+    // MARK: - Poke OAuth Credentials
 
     private var pokeCredentialsURL: URL {
         let configDir: URL
@@ -252,53 +216,5 @@ class GateService: ObservableObject {
             return nil
         }
         return token
-    }
-
-    var authSource: AuthSource {
-        get {
-            let config = (try? Data(contentsOf: configURL))
-                .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
-            if let source = config?["authSource"] as? String, source == "pokeLogin" {
-                return .pokeLogin
-            }
-            if loadAPIKey() != nil {
-                return .apiKey
-            }
-            if hasPokeLoginCredentials {
-                return .pokeLogin
-            }
-            return .none
-        }
-        set {
-            let dir = configURL.deletingLastPathComponent()
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            var json: [String: Any] = [:]
-            if let data = try? Data(contentsOf: configURL),
-               let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                json = existing
-            }
-            json["authSource"] = newValue == .pokeLogin ? "pokeLogin" : "apiKey"
-            if let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) {
-                try? data.write(to: configURL)
-            }
-            objectWillChange.send()
-        }
-    }
-
-    func resolveToken() -> String? {
-        switch authSource {
-        case .pokeLogin:
-            return loadPokeLoginToken()
-        case .apiKey:
-            return loadAPIKey()
-        case .none:
-            return loadAPIKey() ?? loadPokeLoginToken()
-        }
-    }
-
-    enum AuthSource {
-        case pokeLogin
-        case apiKey
-        case none
     }
 }

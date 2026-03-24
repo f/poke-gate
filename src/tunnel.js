@@ -19,11 +19,12 @@ function saveState(state) {
   writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
 }
 
-async function cleanupOldConnection(apiKey) {
+async function cleanupOldConnection() {
   const state = loadState();
   if (!state.connectionId) return;
 
-  const token = getToken() || apiKey;
+  const token = getToken();
+  if (!token) return;
   const base = process.env.POKE_API ?? "https://poke.com/api/v1";
 
   try {
@@ -34,15 +35,18 @@ async function cleanupOldConnection(apiKey) {
   } catch {}
 }
 
-export async function startTunnel({ apiKey, mcpUrl, onEvent }) {
-  await cleanupOldConnection(apiKey);
+export async function startTunnel({ mcpUrl, onEvent }) {
+  await cleanupOldConnection();
 
   const token = getToken();
+  if (!token) {
+    throw new Error("No Poke auth token available for tunnel.");
+  }
 
   const tunnel = new PokeTunnel({
     url: mcpUrl,
     name: "poke-gate",
-    token: token || apiKey,
+    token,
     cleanupOnStop: false,
   });
 

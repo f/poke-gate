@@ -44,11 +44,11 @@ npx poke-gate
 
 ## Setup
 
-1. Get an API key from [poke.com/kitchen/api-keys](https://poke.com/kitchen/api-keys)
-2. Open Poke Gate from your menu bar and go to **Settings**
-3. Paste your API key and save
+1. Open Poke Gate from your menu bar
+2. Click **Start** (or let auto-start run)
+3. If needed, complete the Poke OAuth sign-in flow in your browser
 
-The app connects automatically and shows a green dot when ready.
+The app connects automatically after sign-in and shows a green dot when ready.
 
 ## How it works
 
@@ -97,7 +97,7 @@ The menu bar app manages everything:
 - **Personalized** — shows "Connected to your Poke, <name>"
 - **Auto-start** — connects on launch if API key is saved
 - **Auto-restart** — reconnects automatically if the connection drops
-- **Settings** — paste your API key
+- **Settings** — auth status and reconnect controls
 - **Logs** — view real-time tool calls and connection events
 - **Screen Recording** — prompts for permission on first launch
 
@@ -127,13 +127,11 @@ If you prefer the command line over the macOS app:
 npx poke-gate
 ```
 
-On first run, paste your API key when prompted. Add `--verbose` to see tool calls in real time:
+On first run, if you're not signed in, Poke Gate opens OAuth login automatically. Add `--verbose` to see tool calls in real time:
 
 ```bash
 npx poke-gate --verbose
 ```
-
-Config is stored at `~/.config/poke-gate/config.json`.
 
 ## Security
 
@@ -141,7 +139,7 @@ Config is stored at `~/.config/poke-gate/config.json`.
 
 - Any command can be run with your user's permissions
 - Files can be read and written anywhere your user has access
-- Only your Poke agent (authenticated by your API key) can reach the tunnel
+- Only your authenticated Poke agent can reach the tunnel
 
 Only run Poke Gate on machines and networks you trust.
 
