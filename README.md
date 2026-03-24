@@ -44,11 +44,11 @@ npx poke-gate
 
 ## Setup
 
-1. Open Poke Gate from your menu bar
-2. Click **Start** (or let auto-start run)
-3. If needed, complete the Poke OAuth sign-in flow in your browser
+1. Get an API key from [poke.com/kitchen/api-keys](https://poke.com/kitchen/api-keys)
+2. Open Poke Gate from your menu bar and go to **Settings**
+3. Paste your API key and save
 
-The app connects automatically after sign-in and shows a green dot when ready.
+The app connects automatically and shows a green dot when ready.
 
 ## How it works
 
@@ -94,10 +94,10 @@ From iMessage or Telegram, ask Poke:
 The menu bar app manages everything:
 
 - **Status** — green dot when connected, yellow when connecting, red on error
-- **Personalized** — shows "Connected to your Poke, <name>"
+- **Personalized** — shows "Connected to your Poke, [name]"
 - **Auto-start** — connects on launch if API key is saved
 - **Auto-restart** — reconnects automatically if the connection drops
-- **Settings** — auth status and reconnect controls
+- **Settings** — paste your API key
 - **Logs** — view real-time tool calls and connection events
 - **Screen Recording** — prompts for permission on first launch
 
@@ -127,11 +127,100 @@ If you prefer the command line over the macOS app:
 npx poke-gate
 ```
 
-On first run, if you're not signed in, Poke Gate opens OAuth login automatically. Add `--verbose` to see tool calls in real time:
+On first run, paste your API key when prompted. Add `--verbose` to see tool calls in real time:
 
 ```bash
 npx poke-gate --verbose
 ```
+
+Config is stored at `~/.config/poke-gate/config.json`.
+
+## Agents
+
+Agents are scheduled scripts that run automatically in the background. They live in `~/.config/poke-gate/agents/` and follow a simple naming convention:
+
+```
+<name>.<interval>.js
+```
+
+| File | Runs |
+|------|------|
+| `beeper.1h.js` | Every hour |
+| `backup.2h.js` | Every 2 hours |
+| `health.10m.js` | Every 10 minutes |
+| `cleanup.30m.js` | Every 30 minutes |
+
+Intervals: `Nm` (minutes) or `Nh` (hours). Minimum is 10 minutes.
+
+### Install an agent
+
+Download a community agent from the repository:
+
+```bash
+npx poke-gate agent get beeper
+```
+
+This downloads `beeper.1h.js` and `.env.beeper` to `~/.config/poke-gate/agents/`. Edit the env file with your credentials and test it:
+
+```bash
+nano ~/.config/poke-gate/agents/.env.beeper
+npx poke-gate run-agent beeper
+```
+
+### Per-agent env files
+
+Each agent can have a `.env.<name>` file for secrets:
+
+```
+~/.config/poke-gate/agents/.env.beeper
+```
+
+```env
+BEEPER_TOKEN=your_token_here
+```
+
+Variables are injected into the agent process automatically.
+
+### Agent frontmatter
+
+Each agent file starts with a JSDoc-style frontmatter block:
+
+```javascript
+/**
+ * @agent beeper
+ * @name Beeper Message Digest
+ * @description Fetches messages from the last hour and sends a summary to Poke.
+ * @interval 1h
+ * @env BEEPER_TOKEN - Beeper Desktop local API token
+ * @author f
+ */
+```
+
+### Creating your own agent
+
+An agent is just a JS file that runs with Node.js. It has access to:
+
+- `process.env` — variables from `.env.<name>`
+- `poke` package — `import { Poke, getToken } from "poke"`
+- Any npm package installed globally or via npx
+
+```javascript
+/**
+ * @agent my-agent
+ * @name My Custom Agent
+ * @description Does something useful every 30 minutes.
+ * @interval 30m
+ */
+
+import { Poke, getToken } from "poke";
+
+const poke = new Poke({ apiKey: getToken() });
+await poke.sendMessage("Hello from my agent!");
+```
+
+Save as `~/.config/poke-gate/agents/my-agent.30m.js` and it runs automatically when poke-gate is connected.
+
+Agents start running when poke-gate connects and run once immediately on startup.
 
 ## Security
 
@@ -139,7 +228,7 @@ npx poke-gate --verbose
 
 - Any command can be run with your user's permissions
 - Files can be read and written anywhere your user has access
-- Only your authenticated Poke agent can reach the tunnel
+- Only your Poke agent (authenticated by your API key) can reach the tunnel
 
 Only run Poke Gate on machines and networks you trust.
 
@@ -149,11 +238,16 @@ Only run Poke Gate on machines and networks you trust.
 clients/
   Poke macOS Gate/       macOS menu bar app (SwiftUI)
 bin/
-  poke-gate.js           CLI entry point + onboarding
+  poke-gate.js           CLI entry point, run-agent + agent get subcommands
 src/
-  app.js                 Startup: MCP server + tunnel
+  app.js                 Startup: MCP server + tunnel + agent scheduler
+  agents.js              Agent discovery, scheduling, env loading, download
   mcp-server.js          JSON-RPC MCP handler with OS tools
   tunnel.js              PokeTunnel wrapper
+examples/
+  agents/
+    beeper.1h.js         Example: Beeper message digest agent
+    .env.beeper          Example env file for beeper agent
 ```
 
 ## Credits
@@ -163,4 +257,4 @@ src/
 
 ## License
 
-Poke Gate is released under the [MIT License](LICENSE).
+MIT
