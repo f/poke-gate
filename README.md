@@ -163,4 +163,4 @@ src/
 
 ## License
 
-MIT
+Poke Gate is released under the [MIT License](LICENSE).
