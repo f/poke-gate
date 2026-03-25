@@ -6,6 +6,11 @@ import { homedir } from "node:os";
 const CONFIG_DIR = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
 const STATE_PATH = join(CONFIG_DIR, "poke-gate", "state.json");
 
+function log(msg) {
+  const ts = new Date().toISOString().slice(11, 19);
+  console.log(`[${ts}] ${msg}`);
+}
+
 function loadState() {
   try {
     return JSON.parse(readFileSync(STATE_PATH, "utf-8"));
@@ -19,24 +24,36 @@ function saveState(state) {
   writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
 }
 
-async function cleanupOldConnection() {
-  const state = loadState();
-  if (!state.connectionId) return;
-
+async function cleanupStaleConnections() {
   const token = getToken();
   if (!token) return;
   const base = process.env.POKE_API ?? "https://poke.com/api/v1";
+  const state = loadState();
 
-  try {
-    await fetch(`${base}/mcp/connections/${state.connectionId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch {}
+  const ids = new Set();
+  if (state.connectionId) ids.add(state.connectionId);
+  if (Array.isArray(state.connectionHistory)) {
+    for (const id of state.connectionHistory) ids.add(id);
+  }
+
+  if (ids.size === 0) return;
+
+  log(`Cleaning up ${ids.size} old connection(s)…`);
+
+  for (const id of ids) {
+    try {
+      await fetch(`${base}/mcp/connections/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {}
+  }
+
+  saveState({});
 }
 
 export async function startTunnel({ mcpUrl, onEvent }) {
-  await cleanupOldConnection();
+  await cleanupStaleConnections();
 
   const token = getToken();
   if (!token) {
@@ -51,7 +68,13 @@ export async function startTunnel({ mcpUrl, onEvent }) {
   });
 
   tunnel.on("connected", (info) => {
-    saveState({ connectionId: info.connectionId });
+    const state = loadState();
+    const history = state.connectionHistory || [];
+    history.push(info.connectionId);
+    saveState({
+      connectionId: info.connectionId,
+      connectionHistory: history.slice(-10),
+    });
     onEvent("connected", info);
   });
   tunnel.on("disconnected", () => onEvent("disconnected"));

@@ -247,6 +247,8 @@ class AgentsViewModel: ObservableObject {
 
 struct AgentsView: View {
     @StateObject private var viewModel = AgentsViewModel()
+    @State private var showingGenerate = false
+    @State private var agentToDelete: AgentFile? = nil
 
     var body: some View {
         NavigationSplitView {
@@ -282,20 +284,30 @@ struct AgentsView: View {
                 .tag(agent)
                 .contextMenu {
                     Button("Delete", role: .destructive) {
-                        viewModel.deleteAgent(agent)
+                        agentToDelete = agent
                     }
                 }
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 180, ideal: 220)
             .safeAreaInset(edge: .bottom) {
-                Button {
-                    viewModel.addAgent()
-                } label: {
-                    Label("New Agent", systemImage: "plus")
-                        .font(.caption)
+                HStack(spacing: 12) {
+                    Button {
+                        viewModel.addAgent()
+                    } label: {
+                        Label("New", systemImage: "plus")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showingGenerate = true
+                    } label: {
+                        Label("Generate with Poke", systemImage: "sparkles")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
                 .padding(8)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -314,6 +326,153 @@ struct AgentsView: View {
         }
         .onDisappear {
             viewModel.stopWatching()
+        }
+        .sheet(isPresented: $showingGenerate) {
+            GenerateAgentView(viewModel: viewModel, isPresented: $showingGenerate)
+        }
+        .alert("Delete Agent", isPresented: Binding(
+            get: { agentToDelete != nil },
+            set: { if !$0 { agentToDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { agentToDelete = nil }
+            Button("Delete", role: .destructive) {
+                if let agent = agentToDelete {
+                    viewModel.deleteAgent(agent)
+                    agentToDelete = nil
+                }
+            }
+        } message: {
+            if let agent = agentToDelete {
+                Text("Are you sure you want to delete \"\(agent.name)\"? This will remove the script\(agent.hasEnv ? " and its .env file" : "").")
+            }
+        }
+    }
+}
+
+struct GenerateAgentView: View {
+    @ObservedObject var viewModel: AgentsViewModel
+    @Binding var isPresented: Bool
+    @State private var prompt: String = ""
+    @State private var isSending: Bool = false
+    @State private var sent: Bool = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            if sent {
+                Spacer()
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.green)
+
+                Text("Request sent to Poke!")
+                    .font(.headline)
+
+                Text("Poke is generating your agent and will save it directly to your Mac. You'll see it appear in the sidebar when it's ready.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Text("Keep Poke Gate running while Poke works.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                Button("Done") {
+                    isPresented = false
+                }
+                .keyboardShortcut(.defaultAction)
+            } else {
+                HStack {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(.purple)
+                    Text("Generate Agent with Poke")
+                        .font(.headline)
+                }
+
+                Text("Describe what you want the agent to do. Poke will generate the code and save it to your agents folder.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                TextEditor(text: $prompt)
+                    .font(.system(.body, design: .default))
+                    .padding(8)
+                    .frame(minHeight: 100)
+                    .scrollContentBackground(.hidden)
+                    .background(.quaternary.opacity(0.3))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(.quaternary)
+                    )
+
+                HStack {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .keyboardShortcut(.cancelAction)
+
+                    Spacer()
+
+                    Button("Generate") {
+                        sendPrompt()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(prompt.isEmpty || isSending)
+                }
+            }
+        }
+        .padding(20)
+        .frame(width: 420, height: sent ? 250 : nil)
+    }
+
+    private func sendPrompt() {
+        isSending = true
+
+        Task {
+            do {
+                guard let token = GateService().loadPokeLoginToken() else {
+                    isSending = false
+                    return
+                }
+
+                let message = """
+                Generate a Poke Gate agent based on my description below.
+
+                Write the COMPLETE JavaScript code using the write_file tool to save it directly to ~/.config/poke-gate/agents/<name>.<interval>.js
+
+                RULES:
+                - Valid ES module with imports.
+                - Start with JSDoc frontmatter: @agent, @name, @description, @interval, @author.
+                - Use: import { Poke, getToken } from "poke";
+                - Keep under 100 lines. Intervals: 10m, 30m, 1h, 2h, 6h, 12h, 24h.
+                - Handle errors with try/catch.
+                - Use state files to avoid duplicate sends.
+
+                IMPORTANT: Use the write_file tool to save the agent code now.
+                IMPORTANT: When done, tell me the file name.
+
+                My request: \(prompt)
+                """
+
+                let url = URL(string: "https://poke.com/api/v1/inbound/api-message")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = try JSONSerialization.data(withJSONObject: ["message": message])
+
+                let (_, response) = try await URLSession.shared.data(for: request)
+                let httpResp = response as? HTTPURLResponse
+
+                isSending = false
+                sent = httpResp?.statusCode == 200
+            } catch {
+                isSending = false
+            }
         }
     }
 }

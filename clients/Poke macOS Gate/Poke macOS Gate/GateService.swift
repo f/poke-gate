@@ -225,7 +225,7 @@ class GateService: ObservableObject {
         return paths.joined(separator: ":")
     }
 
-    private func findNpx() -> String {
+    func findNpx() -> String {
         let path = shellPath()
         for dir in path.split(separator: ":") {
             let npxPath = "\(dir)/npx"
