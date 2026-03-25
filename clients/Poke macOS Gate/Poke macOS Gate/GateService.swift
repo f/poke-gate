@@ -251,7 +251,7 @@ class GateService: ObservableObject {
         let pipe = Pipe()
 
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        proc.arguments = ["-c", "\(npxBin) -y poke-gate --verbose"]
+        proc.arguments = ["-c", "\(npxBin) -y poke-gate@latest --verbose"]
         proc.environment = ProcessInfo.processInfo.environment.merging(
             [
                 "PATH": fullPath,
