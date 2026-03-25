@@ -1,6 +1,34 @@
 # Creating Agents
 
-This guide walks you through creating an agent from scratch.
+There are two ways to create agents: **ask Poke to generate one** (recommended) or write one manually.
+
+## Generate with AI
+
+The fastest way — describe what you want and Poke writes the code for you:
+
+```bash
+npx poke-gate agent create --prompt "monitor disk space and alert when above 85%"
+```
+
+Or interactively:
+
+```bash
+npx poke-gate agent create
+> Describe the agent you want to create:
+> track my git repos for uncommitted changes
+```
+
+Poke generates the complete agent code and saves it directly to your agents folder using the `write_file` tool (requires poke-gate to be running). You'll get a confirmation in your chat when it's done.
+
+You can also generate agents from the **macOS app** — open Agents, click "Generate with AI", type your description, and Poke does the rest.
+
+::: tip
+Poke may ask clarifying questions before writing the code. Just reply in your chat and it will proceed.
+:::
+
+## Write manually
+
+If you prefer to write agents yourself, follow the steps below.
 
 ## Step 1: Create the file
 

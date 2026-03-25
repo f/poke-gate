@@ -21,6 +21,11 @@ async function main() {
     }
     const { downloadAgent } = await import("../src/agents.js");
     await downloadAgent(name);
+  } else if (args[0] === "agent" && args[1] === "create") {
+    const promptIdx = args.indexOf("--prompt");
+    const prompt = promptIdx !== -1 ? args.slice(promptIdx + 1).join(" ") : args.slice(2).join(" ") || null;
+    const { createAgent } = await import("../src/agent-create.js");
+    await createAgent(prompt);
   } else {
     await import("../src/app.js");
   }

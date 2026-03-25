@@ -41,6 +41,30 @@ npx poke-gate run-agent beeper
 
 Finds `~/.config/poke-gate/agents/beeper.*.js` and runs it with the env from `.env.beeper`.
 
+## Generate an agent with AI
+
+```bash
+npx poke-gate agent create --prompt "<description>"
+```
+
+Sends your description to Poke with detailed instructions and examples. Poke generates the agent code and saves it directly to `~/.config/poke-gate/agents/` using the `write_file` tool.
+
+**Requires poke-gate to be running** (so Poke can use the `write_file` tool through the tunnel).
+
+**Interactive mode:**
+
+```bash
+npx poke-gate agent create
+```
+
+**Examples:**
+
+```bash
+npx poke-gate agent create --prompt "alert me when disk space is above 85%"
+npx poke-gate agent create --prompt "send me a daily git commit summary across all repos"
+npx poke-gate agent create --prompt "track Spotify listening and log my music taste"
+```
+
 ## Install an agent
 
 ```bash

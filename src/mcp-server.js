@@ -1,6 +1,6 @@
 import http from "node:http";
 import { exec } from "node:child_process";
-import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, symlinkSync, lstatSync } from "node:fs";
 import { hostname, platform, arch, uptime, totalmem, freemem, homedir } from "node:os";
 import { join, resolve, extname } from "node:path";
 
@@ -91,6 +91,19 @@ const TOOLS = [
         path: { type: "string", description: "Absolute or relative path to the image/binary file" },
       },
       required: ["path"],
+    },
+  },
+  {
+    name: "run_agent",
+    description:
+      "Run a Poke Gate agent by name. Agents are scheduled scripts in ~/.config/poke-gate/agents/. " +
+      "Use this to manually trigger an agent — it will execute and send its results to you.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Agent name (e.g. 'beeper', 'battery', 'context')" },
+      },
+      required: ["name"],
     },
   },
   {
@@ -231,6 +244,40 @@ function handleToolCall(name, args) {
         logTool(name, args, r);
         return r;
       }
+    }
+
+    case "run_agent": {
+      const agentName = args.name;
+      logTool(name, { name: agentName });
+      const agentsDir = join(homedir(), ".config", "poke-gate", "agents");
+
+      // Ensure node_modules symlink so agents can import poke
+      const pkgNodeModules = join(new URL(".", import.meta.url).pathname, "..", "node_modules");
+      const agentNodeModules = join(agentsDir, "node_modules");
+      if (existsSync(pkgNodeModules)) {
+        try {
+          const s = lstatSync(agentNodeModules);
+          if (!s.isSymbolicLink()) throw new Error();
+        } catch {
+          try { symlinkSync(pkgNodeModules, agentNodeModules, "junction"); } catch {}
+        }
+      }
+
+      let files;
+      try { files = readdirSync(agentsDir).filter((f) => f.endsWith(".js") && f.startsWith(agentName + ".")); } catch { files = []; }
+      if (files.length === 0) {
+        let available = [];
+        try { available = readdirSync(agentsDir).filter(f => f.endsWith(".js")).map(f => f.split(".")[0]); } catch {}
+        return { content: [{ type: "text", text: `Agent "${agentName}" not found. Available: ${available.join(", ") || "none"}` }], isError: true };
+      }
+      const agentFile = join(agentsDir, files[0]);
+      return runCommand(`node "${agentFile}"`, agentsDir).then((result) => {
+        const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
+        if (result.exitCode === 0) {
+          return { content: [{ type: "text", text: `Agent "${agentName}" completed.\n${output || "No output."}` }] };
+        }
+        return { content: [{ type: "text", text: `Agent "${agentName}" failed (exit ${result.exitCode}).\n${output}` }], isError: true };
+      });
     }
 
     case "take_screenshot": {
