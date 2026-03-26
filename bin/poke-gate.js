@@ -2,6 +2,19 @@
 
 const args = process.argv.slice(2);
 
+const VALID_MODES = ["full", "limited", "sandbox"];
+
+function parseMode() {
+  const idx = args.indexOf("--mode");
+  if (idx === -1) return null;
+  const value = args[idx + 1];
+  if (!value || !VALID_MODES.includes(value)) {
+    console.error(`Invalid --mode value. Must be one of: ${VALID_MODES.join(", ")}`);
+    process.exit(1);
+  }
+  return value;
+}
+
 async function main() {
   if (args[0] === "run-agent") {
     const name = args[1];
@@ -27,6 +40,10 @@ async function main() {
     const { createAgent } = await import("../src/agent-create.js");
     await createAgent(prompt);
   } else {
+    const mode = parseMode();
+    if (mode) {
+      process.env.POKE_GATE_PERMISSION_MODE = mode;
+    }
     await import("../src/app.js");
   }
 }

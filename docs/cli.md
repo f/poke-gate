@@ -8,6 +8,23 @@ npx poke-gate
 
 Starts the MCP server, connects the tunnel, and begins the agent scheduler. On first run, if you're not signed in, opens Poke OAuth in your browser.
 
+### Access mode
+
+```bash
+npx poke-gate --mode limited
+npx poke-gate --mode sandbox
+```
+
+Controls which tools your Poke agent can use. Defaults to `full` if not specified.
+
+| Mode | Description |
+|------|-------------|
+| `full` | All tools available, subject to chat approval for risky actions |
+| `limited` | Safe tools and a curated set of read-only commands only |
+| `sandbox` | Broader command support, but writes are restricted by macOS `sandbox-exec` policies |
+
+You can also set the mode via the `POKE_GATE_PERMISSION_MODE` environment variable. The `--mode` flag takes precedence.
+
 ### Verbose mode
 
 ```bash
@@ -92,6 +109,8 @@ Fetching agent "beeper" from GitHub...
 
 | Variable | Description |
 |----------|-------------|
+| `POKE_GATE_PERMISSION_MODE` | Access mode: `full` (default), `limited`, or `sandbox` |
+| `POKE_GATE_HMAC_SECRET` | Fixed HMAC secret for approval tokens (random per session by default) |
 | `POKE_API_KEY` | Override the API key (skips OAuth) |
 | `POKE_API` | Override the Poke API base URL |
 | `POKE_FRONTEND` | Override the Poke frontend URL |

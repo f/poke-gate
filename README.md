@@ -44,9 +44,9 @@ npx poke-gate
 
 ## Setup
 
-1. Get an API key from [poke.com/kitchen/api-keys](https://poke.com/kitchen/api-keys)
-2. Open Poke Gate from your menu bar and go to **Settings**
-3. Paste your API key and save
+1. Open Poke Gate from your menu bar
+2. The **Setup View** guides you through choosing an access mode and granting Accessibility permission
+3. Sign in with Poke OAuth when prompted — a browser window opens automatically
 
 The app connects automatically and shows a green dot when ready.
 
@@ -91,15 +91,17 @@ From iMessage or Telegram, ask Poke:
 
 ## macOS App
 
-The menu bar app manages everything:
+The native SwiftUI menu bar app manages everything:
 
+- **First-run setup** — guided onboarding to choose an access mode and grant Accessibility permission
 - **Status** — green dot when connected, yellow when connecting, red on error
 - **Personalized** — shows "Connected to your Poke, [name]"
-- **Auto-start** — connects on launch if API key is saved
+- **Access mode** — switch between Full, Limited, and Sandbox from Settings or the popover
+- **Accessibility-first** — prompts for Accessibility permission (needed for automation) with live status updates
+- **Auto-start** — connects on launch if signed in via OAuth
 - **Auto-restart** — reconnects automatically if the connection drops
-- **Settings** — paste your API key
-- **Logs** — view real-time tool calls and connection events
-- **Screen Recording** — prompts for permission on first launch
+- **Logs** — view real-time tool calls with sandbox status
+- **About** — version pulled dynamically from the app bundle
 
 The app runs in the menu bar only (no Dock icon). Quit is the only way to stop it.
 
@@ -127,10 +129,17 @@ If you prefer the command line over the macOS app:
 npx poke-gate
 ```
 
-On first run, paste your API key when prompted. Add `--verbose` to see tool calls in real time:
+On first run, Poke OAuth opens in your browser. Add `--verbose` to see tool calls in real time:
 
 ```bash
 npx poke-gate --verbose
+```
+
+Set the access mode with `--mode`:
+
+```bash
+npx poke-gate --mode limited
+npx poke-gate --mode sandbox
 ```
 
 Config is stored at `~/.config/poke-gate/config.json`.
@@ -226,15 +235,34 @@ Save as `~/.config/poke-gate/agents/my-agent.30m.js` and it runs automatically w
 
 Agents start running when poke-gate connects and run once immediately on startup.
 
+## Access modes
+
+Poke Gate supports three access modes that control what your agent can do:
+
+| Mode | Description |
+|------|-------------|
+| **Full** (default) | All tools available. Risky actions (commands, file writes, screenshots) require chat approval. |
+| **Limited** | Read-only tools plus a curated set of safe commands (`ls`, `cat`, `grep`, `curl`, etc.). `write_file` and `take_screenshot` are disabled. |
+| **Sandbox** | Broader command support than Limited, but writes are restricted to `~/Downloads` and `/tmp` via macOS `sandbox-exec`. |
+
+Set the mode via CLI flag, environment variable, or the macOS app Settings:
+
+```bash
+npx poke-gate --mode sandbox
+# or
+POKE_GATE_PERMISSION_MODE=limited npx poke-gate
+```
+
 ## Security
 
-**Poke Gate grants full shell access to your Poke agent.** This means:
+**In full mode, Poke Gate grants full shell access to your Poke agent.** This means:
 
 - Any command can be run with your user's permissions
 - Files can be read and written anywhere your user has access
-- Only your Poke agent (authenticated by your API key) can reach the tunnel
+- Risky tools require approval in chat before execution
+- Only your Poke agent (authenticated via Poke OAuth) can reach the tunnel
 
-Only run Poke Gate on machines and networks you trust.
+Only run Poke Gate on machines and networks you trust. Use `limited` or `sandbox` mode if you want tighter restrictions.
 
 ## Project structure
 
@@ -242,12 +270,18 @@ Only run Poke Gate on machines and networks you trust.
 clients/
   Poke macOS Gate/       macOS menu bar app (SwiftUI)
 bin/
-  poke-gate.js           CLI entry point, run-agent + agent get subcommands
+  poke-gate.js           CLI entry point with --mode flag
 src/
   app.js                 Startup: MCP server + tunnel + agent scheduler
   agents.js              Agent discovery, scheduling, env loading, download
-  mcp-server.js          JSON-RPC MCP handler with OS tools
+  mcp-server.js          JSON-RPC MCP handler, tools, access policy, sandbox
+  permission-service.js  HMAC approval tokens, session whitelisting
   tunnel.js              PokeTunnel wrapper
+test/
+  mcp-server-access-policy.test.js
+  mcp-server-loop-guard.test.js
+  mcp-server-sandbox-command.test.js
+  permission-service.test.js
 examples/
   agents/
     beeper.1h.js         Example: Beeper message digest agent

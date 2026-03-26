@@ -58,6 +58,10 @@ function normalizePermissionMode(value) {
   return "full";
 }
 
+export function getPermissionMode() {
+  return PERMISSION_MODE;
+}
+
 export function enableLogging(enabled) {
   logEnabled = enabled;
 }

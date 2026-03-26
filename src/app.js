@@ -1,4 +1,4 @@
-import { startMcpServer, enableLogging } from "./mcp-server.js";
+import { startMcpServer, enableLogging, getPermissionMode } from "./mcp-server.js";
 import { startTunnel } from "./tunnel.js";
 import { startAgentScheduler, stopAgentScheduler } from "./agents.js";
 import { Poke, isLoggedIn, login, getToken } from "poke";
@@ -103,6 +103,7 @@ function scheduleReconnect(mcpUrl, token) {
 
 async function main() {
   log("poke-gate starting...");
+  log(`Access mode: ${getPermissionMode()}`);
 
   const token = await ensureAuthenticated();
 

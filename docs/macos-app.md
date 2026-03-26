@@ -1,6 +1,15 @@
 # macOS App
 
-Poke Gate includes a native SwiftUI menu bar app for macOS.
+Poke Gate includes a native SwiftUI menu bar app for macOS 15+ (Sequoia).
+
+## First-run setup
+
+On first launch, a **Setup View** guides you through two steps:
+
+1. **Choose access mode** — select Full, Limited, or Sandbox (see [Access modes](#access-modes) below)
+2. **Grant permissions** — the app checks for Accessibility permission and walks you through enabling it in System Settings
+
+The setup view only appears once. You can change the access mode anytime from Settings.
 
 ## Menu bar
 
@@ -10,8 +19,8 @@ The app runs in the menu bar only — no Dock icon. Click the door icon to see t
 - **Personalized** — shows "Connected to your Poke, name"
 - **Recent activity** — last few log entries
 - **Action buttons** — Logs, Agents, Settings, Restart/Start, Quit
-- **About** — version, GitHub link
-- **Setup** — dedicated first-run permission and mode selection view
+- **About** — dynamic version pulled from the app bundle (no hardcoded strings)
+- **Access mode chip** — shows the current mode with quick-switch buttons
 
 ### Status icons
 
@@ -21,6 +30,28 @@ The app runs in the menu bar only — no Dock icon. Click the door icon to see t
 | 🚪 (closed) | Stopped or connecting |
 | ⚠️ | Error |
 
+## Access modes
+
+The macOS app lets you choose an access mode from Settings or the popover. Changing the mode restarts poke-gate automatically.
+
+| Mode | What it allows |
+|------|---------------|
+| **Full System Access** | All tools available, subject to chat approval for risky actions |
+| **Limited Permissions** | Safe tools and curated command families only (`ls`, `cat`, `grep`, `curl`, etc.) |
+| **Run in Sandbox** | Broader command support, but writes restricted by macOS `sandbox-exec` to `~/Downloads` and `/tmp` |
+
+When **Full** mode is selected, the app shows an Accessibility permission prompt — this permission is required for keyboard/mouse automation and AppleScript tasks.
+
+## Accessibility permission
+
+The app uses an **Accessibility-first** permission model. Instead of requesting Full Disk Access, the app checks for Accessibility permission using the native `AXIsProcessTrusted()` API.
+
+- A dedicated **AccessibilityPermissionView** shows the current status with a button to open System Settings
+- Permission state refreshes automatically whenever the app regains focus
+- The view updates live — no need to restart the app after granting permission
+
+When Full mode is active, this view appears in both the Settings window and the popover to ensure you don't miss it.
+
 ## Settings
 
 Open Settings from the popover. The settings window shows:
@@ -28,6 +59,8 @@ Open Settings from the popover. The settings window shows:
 - **Authentication status** — whether you're signed in via Poke OAuth
 - **Sign in button** — runs `npx poke login` and opens a browser window
 - **Connection status** — current state with a Reconnect button
+- **Access mode** — radio buttons for Full, Limited, and Sandbox with descriptions
+- **Accessibility status** — permission check with a direct link to System Settings (in Full mode)
 
 ## Logs
 
@@ -35,6 +68,7 @@ The Logs window shows real-time activity:
 
 - Tool calls are highlighted
 - Errors appear in red
+- Sandbox status shown for each command (`sandbox=os` or `sandbox=none`)
 - Copy all logs to clipboard
 - Clear logs
 

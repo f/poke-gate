@@ -1,6 +1,6 @@
 {
   "name": "poke-gate",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "Expose your machine to your Poke AI assistant via MCP tunnel",
   "type": "module",
   "bin": {
