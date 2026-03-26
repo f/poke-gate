@@ -5,7 +5,7 @@
 <h1 align="center">Poke Gate</h1>
 
 <p align="center">
-  Give your <a href="https://poke.com">Poke</a> AI assistant hands-on access to your Mac.<br>
+  Let your <a href="https://poke.com">Poke</a> AI assistant access your machine.<br>
   <sub>A community project — not affiliated with Poke or The Interaction Company.</sub>
 </p>
 
@@ -18,121 +18,94 @@
 
 ---
 
-## Just ask Poke from your phone
+Run Poke Gate on your Mac, then message Poke from iMessage, Telegram, or SMS to run commands, read files, take screenshots, and more — all on your machine.
 
-Run Poke Gate on your Mac. Then message Poke from **iMessage, Telegram, or SMS** and ask it to run commands, read files, take screenshots, and more—all on your machine.
+## Install
 
----
-
-## Quick Start
-
-### 1. Get an API key
-Visit [poke.com/kitchen/api-keys](https://poke.com/kitchen/api-keys) and grab one.
-
-### 2. Install Poke Gate
-Choose one:
-
-**Option A: Homebrew** (easiest)
+**Homebrew** (recommended)
 
 ```bash
 brew install f/tap/poke-gate
 ```
 
-**Option B: Download manually**
-Download **Poke.macOS.Gate.dmg** from [Releases](https://github.com/f/poke-gate/releases), open it, drag to Applications. Then run:
+**Manual download**
+
+Download the latest **Poke.macOS.Gate.dmg** from [Releases](https://github.com/f/poke-gate/releases), open it, and drag to Applications. Since the app is not notarized, you may need to run:
+
 ```bash
 xattr -cr /Applications/Poke\ macOS\ Gate.app
 ```
 
-**Option C: CLI only** (no menu bar app)
+**CLI** (no macOS app needed)
+
 ```bash
 npx poke-gate
 ```
 
-### 3. Open it and add your API key
-1. Launch **Poke Gate** from your menu bar
-2. Click **Settings**
+## Setup
+
+1. Get an API key from [poke.com/kitchen/api-keys](https://poke.com/kitchen/api-keys)
+2. Open Poke Gate from your menu bar and go to **Settings**
 3. Paste your API key and save
-4. You'll see a **green dot** when connected ✓
 
-You're ready to go!
+The app connects automatically and shows a green dot when ready.
 
-## How It Works
+## How it works
 
-When you ask Poke a question that needs your machine:
-
-```
-You ask Poke over iMessage/Telegram
-           ↓
-Poke's AI figures out what tool to use
-           ↓
-"Hey Poke Gate, run this command"
-           ↓
-Poke Gate on your Mac runs it locally
-           ↓
-Result comes back to your chat
+```mermaid
+flowchart TD
+    A["You message Poke\nfrom iMessage / Telegram / SMS"] --> B["Poke Agent"]
+    B --> C["Agent calls MCP tool"]
+    C --> D["MCP Tunnel (WebSocket)"]
+    D --> E["Poke Gate on your Mac"]
+    E --> F["Runs command / reads file / takes screenshot"]
+    F --> D
+    D --> B
+    B --> A
 ```
 
-**In more detail:**
-- Poke Gate runs as a local MCP server on your Mac
-- It tunnels through a secure WebSocket to Poke's cloud
-- When you ask Poke something that needs your machine, the agent calls the tools
-- Poke Gate executes them locally (no cloud processing of your data)
-- Results flow back through the tunnel to your chat
+Poke Gate runs a local MCP server and tunnels it to Poke's cloud. When you ask Poke something that needs your machine, the agent calls the tools, Poke Gate executes them locally, and the result flows back to your chat.
 
----
+## Tools
 
-## What Can Poke Do?
+| Tool | What it does |
+|------|-------------|
+| `run_command` | Execute any shell command (ls, git, brew, python, curl…) |
+| `read_file` | Read a text file |
+| `read_image` | Read an image file and return it as base64 |
+| `write_file` | Write content to a file |
+| `list_directory` | List files and directories |
+| `system_info` | OS, hostname, architecture, uptime, memory |
+| `take_screenshot` | Capture the screen (requires Screen Recording permission) |
 
-Every time you message Poke, these tools are available on your machine:
+## Examples
 
-| Tool | What you can do |
-|------|-----------------|
-| `run_command` | Execute shell commands (ls, git, brew, python, curl, etc.) |
-| `read_file` | Read any text file |
-| `read_image` | Read images and get their content |
-| `write_file` | Create or edit files |
-| `list_directory` | See what's in a folder |
-| `system_info` | Check OS, hostname, architecture, uptime, memory |
-| `take_screenshot` | Capture your screen (requires Accessibility permission) |
+From iMessage or Telegram, ask Poke:
 
-### Example Conversations
+- "What's running on port 3000?"
+- "Show me the last 5 git commits in my project"
+- "How much disk space do I have left?"
+- "Read my ~/.zshrc and suggest improvements"
+- "Take a screenshot of my screen"
+- "Create a file called notes.txt on my Desktop"
 
-Just ask Poke from iMessage, Telegram, or SMS:
+## macOS App
 
-- _"What's running on port 3000?"_
-- _"Show me the last 5 git commits"_
-- _"How much disk space is left?"_
-- _"Read my ~/.zshrc and suggest improvements"_
-- _"Take a screenshot"_
-- _"Create a file called notes.txt on my Desktop"_
+The menu bar app manages everything:
 
----
+- **Status** — green dot when connected, yellow when connecting, red on error
+- **Personalized** — shows "Connected to your Poke, [name]"
+- **Auto-start** — connects on launch if API key is saved
+- **Auto-restart** — reconnects automatically if the connection drops
+- **Settings** — paste your API key
+- **Logs** — view real-time tool calls and connection events
+- **Screen Recording** — prompts for permission on first launch
 
-## The Menu Bar App
-
-Once you have Poke Gate running, a menu bar app gives you full control:
-
-**Status indicator**
-- 🟢 Green dot = connected and ready
-- 🟡 Yellow = connecting
-- 🔴 Red = error (check Logs)
-
-**Auto-connect** — connects on launch if your API key is saved
-
-**Auto-reconnect** — automatically restarts if the connection drops
-
-**Settings** — paste or update your API key anytime
-
-**Logs** — watch real-time tool calls and connection events
-
-**Permissions** — first launch prompts for Accessibility access to enable UI automation and screen capture.
-
-**Quit** — the only way to stop (it runs in menu bar only, no Dock icon)
+The app runs in the menu bar only (no Dock icon). Quit is the only way to stop it.
 
 ### Building from source
 
-Want to customize it? You'll need macOS 15+ and Xcode 15+:
+Requires macOS 15+ and Xcode 26+.
 
 ```bash
 git clone https://github.com/f/poke-gate.git
@@ -140,39 +113,40 @@ cd poke-gate/clients/Poke\ macOS\ Gate
 open Poke\ macOS\ Gate.xcodeproj
 ```
 
-Then hit **Run** in Xcode, or from the command line:
+Hit **Run** in Xcode, or build from the command line:
+
 ```bash
 ./build.sh
 ```
 
-## CLI Mode
+## CLI usage
 
-Prefer the terminal over menu bar? Use the CLI version instead:
+If you prefer the command line over the macOS app:
 
 ```bash
 npx poke-gate
 ```
 
-On first run, paste your API key when prompted. It's saved to `~/.config/poke-gate/config.json`.
+On first run, paste your API key when prompted. Add `--verbose` to see tool calls in real time:
 
-**See more details in real-time:**
 ```bash
 npx poke-gate --verbose
 ```
 
----
+Config is stored at `~/.config/poke-gate/config.json`.
 
-## Agents — Automatic Scheduled Tasks
+## Agents
 
-Agents are little scripts that run automatically on your Mac at a set interval. Perfect for scheduled health checks, backups, reports, or anything you want running in the background.
+<p align="center">
+  <img src="assets/screenshots/agents-editor.png" width="600" alt="Agents Editor">
+</p>
 
-Agents live in `~/.config/poke-gate/agents/` and follow a simple naming pattern:
+Agents are scheduled scripts that run automatically in the background. They live in `~/.config/poke-gate/agents/` and follow a simple naming convention:
 
 ```
 <name>.<interval>.js
 ```
 
-**Examples:**
 | File | Runs |
 |------|------|
 | `beeper.1h.js` | Every hour |
@@ -180,32 +154,60 @@ Agents live in `~/.config/poke-gate/agents/` and follow a simple naming pattern:
 | `health.10m.js` | Every 10 minutes |
 | `cleanup.30m.js` | Every 30 minutes |
 
-Minimum interval is 10 minutes. Use `m` for minutes or `h` for hours.
+Intervals: `Nm` (minutes) or `Nh` (hours). Minimum is 10 minutes.
 
-### Use a community agent
+### Install an agent
 
-Download pre-made agents from our repository:
+Download a community agent from the repository:
 
 ```bash
 npx poke-gate agent get beeper
 ```
 
-This downloads `beeper.1h.js` and `.env.beeper` to your agents folder. Each agent can have its own `.env` file for secrets.
+This downloads `beeper.1h.js` and `.env.beeper` to `~/.config/poke-gate/agents/`. Edit the env file with your credentials and test it:
 
-**Test it first:**
 ```bash
 nano ~/.config/poke-gate/agents/.env.beeper
 npx poke-gate run-agent beeper
 ```
 
-### Create your own agent
+### Per-agent env files
 
-An agent is just a JavaScript file that runs with Node.js. You get access to:
+Each agent can have a `.env.<name>` file for secrets:
+
+```
+~/.config/poke-gate/agents/.env.beeper
+```
+
+```env
+BEEPER_TOKEN=your_token_here
+```
+
+Variables are injected into the agent process automatically.
+
+### Agent frontmatter
+
+Each agent file starts with a JSDoc-style frontmatter block:
+
+```javascript
+/**
+ * @agent beeper
+ * @name Beeper Message Digest
+ * @description Fetches messages from the last hour and sends a summary to Poke.
+ * @interval 1h
+ * @env BEEPER_TOKEN - Beeper Desktop local API token
+ * @author f
+ */
+```
+
+### Creating your own agent
+
+An agent is just a JS file that runs with Node.js. It has access to:
+
 - `process.env` — variables from `.env.<name>`
-- `poke` package — to send messages back to Poke
+- `poke` package — `import { Poke, getToken } from "poke"`
 - Any npm package installed globally or via npx
 
-**Minimal example:**
 ```javascript
 /**
  * @agent my-agent
@@ -220,70 +222,43 @@ const poke = new Poke({ apiKey: getToken() });
 await poke.sendMessage("Hello from my agent!");
 ```
 
-Save it to `~/.config/poke-gate/agents/my-agent.30m.js` and it runs automatically when poke-gate connects.
+Save as `~/.config/poke-gate/agents/my-agent.30m.js` and it runs automatically when poke-gate is connected.
 
-**Agent frontmatter** (the comment at the top):
-```javascript
-/**
- * @agent beeper                    // Internal name (filename without .js)
- * @name Beeper Message Digest      // Human-readable name
- * @description Fetches messages... // What it does
- * @interval 1h                     // How often it runs
- * @env BEEPER_TOKEN                // Required env variables
- * @author f                        // Your name
- */
-```
+Agents start running when poke-gate connects and run once immediately on startup.
 
-**Environment variables:**
-Create a `.env.<name>` file next to your agent:
+## Security
 
-```
-~/.config/poke-gate/agents/.env.beeper
-```
+**Poke Gate grants full shell access to your Poke agent.** This means:
 
-```env
-BEEPER_TOKEN=your_token_here
-SLACK_WEBHOOK=https://hooks.slack.com/...
-```
+- Any command can be run with your user's permissions
+- Files can be read and written anywhere your user has access
+- Only your Poke agent (authenticated by your API key) can reach the tunnel
 
-Variables are automatically injected into your agent process.
+Only run Poke Gate on machines and networks you trust.
 
----
-
-## Security & Privacy
-
-**⚠️ Important:** Poke Gate grants your Poke agent full shell access to your Mac. This means:
-
-- Any command can run with your user's permissions
-- Files can be read and written anywhere you have access  
-- **Only your Poke agent** (authenticated by your API key) can reach the tunnel
-
-**Only use Poke Gate on machines and networks you trust.**
-
-Your data never leaves your machine during execution — the tunnel just coordinates between Poke and your local Poke Gate server.
-
----
-
-## Project Structure
+## Project structure
 
 ```
 clients/
   Poke macOS Gate/       macOS menu bar app (SwiftUI)
 bin/
-  poke-gate.js           CLI entry point + agent commands
+  poke-gate.js           CLI entry point, run-agent + agent get subcommands
 src/
-  app.js                 Startup: MCP server + tunnel + scheduler
-  agents.js              Agent discovery & scheduling
+  app.js                 Startup: MCP server + tunnel + agent scheduler
+  agents.js              Agent discovery, scheduling, env loading, download
   mcp-server.js          JSON-RPC MCP handler with OS tools
   tunnel.js              PokeTunnel wrapper
 examples/
-  agents/                Example agents you can adapt
+  agents/
+    beeper.1h.js         Example: Beeper message digest agent
+    .env.beeper          Example env file for beeper agent
 ```
 
----
+## Credits
 
-## Credits & License
+- [Poke](https://poke.com) by [The Interaction Company of California](https://interaction.co)
+- [Poke SDK](https://www.npmjs.com/package/poke)
 
-- Built for [Poke](https://poke.com) by [The Interaction Company of California](https://interaction.co)
-- Uses [Poke SDK](https://www.npmjs.com/package/poke)
-- MIT License
+## License
+
+MIT
