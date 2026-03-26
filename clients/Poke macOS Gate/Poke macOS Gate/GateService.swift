@@ -34,7 +34,7 @@ class GateService: ObservableObject {
             switch self {
             case .full: return "All tools are available, subject to chat approval."
             case .limited: return "Safe tools and curated command families only."
-            case .sandbox: return "Broader command support, but wrapped by OS sandbox policies."
+            case .sandbox: return "Broader command support, but strictly limited by macOS sandbox-exec policies."
             }
         }
     }

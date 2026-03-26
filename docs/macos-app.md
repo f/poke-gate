@@ -11,6 +11,7 @@ The app runs in the menu bar only — no Dock icon. Click the door icon to see t
 - **Recent activity** — last few log entries
 - **Action buttons** — Logs, Agents, Settings, Restart/Start, Quit
 - **About** — version, GitHub link
+- **Setup** — dedicated first-run permission and mode selection view
 
 ### Status icons
 
@@ -58,7 +59,7 @@ The app connects automatically on launch if you've previously signed in. If the 
 
 ## Building from source
 
-Requires macOS 15+ and Xcode 26+.
+Requires macOS 15+ and Xcode 16+.
 
 ```bash
 git clone https://github.com/f/poke-gate.git

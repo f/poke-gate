@@ -28,14 +28,17 @@ If you don't need the macOS app:
 npx poke-gate
 ```
 
-## Sign in
+Poke Gate needs **Accessibility** permission on your Mac to automate keyboard/mouse and take screenshots.
 
+### 1. Sign in
 Poke Gate uses Poke OAuth to authenticate. On first launch:
 
-1. Open Poke Gate from your menu bar
-2. The app starts and connects automatically
-3. If you're not signed in, a browser window opens for Poke OAuth
-4. After signing in, the connection is established
+1. Open Poke Gate from your menu bar.
+2. The **Setup View** will appear to guide you through:
+   - Selecting an access mode (Full, Limited, or Sandbox)
+   - Granting the required macOS Accessibility permissions
+3. If you're not signed in, a browser window opens for Poke OAuth.
+4. After signing in, the connection is established.
 
 You can also sign in manually:
 

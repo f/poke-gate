@@ -94,7 +94,7 @@ Every time you message Poke, these tools are available on your machine:
 | `write_file` | Create or edit files |
 | `list_directory` | See what's in a folder |
 | `system_info` | Check OS, hostname, architecture, uptime, memory |
-| `take_screenshot` | Capture your screen (requires Screen Recording permission) |
+| `take_screenshot` | Capture your screen (requires Accessibility permission) |
 
 ### Example Conversations
 
@@ -126,7 +126,7 @@ Once you have Poke Gate running, a menu bar app gives you full control:
 
 **Logs** — watch real-time tool calls and connection events
 
-**Permissions** — first launch prompts for Screen Recording access
+**Permissions** — first launch prompts for Accessibility access to enable UI automation and screen capture.
 
 **Quit** — the only way to stop (it runs in menu bar only, no Dock icon)
 
