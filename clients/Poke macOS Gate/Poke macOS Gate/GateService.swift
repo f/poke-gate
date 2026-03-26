@@ -108,10 +108,26 @@ class GateService: ObservableObject {
     private var activeTerminalPreviewId: UUID?
     private var permissionPollingTimer: Timer?
 
+    private var appActiveObserver: NSObjectProtocol?
+
     init() {
         self.permissionMode = Self.loadPermissionModeStatic()
         self.hasCompletedSetup = Self.loadHasCompletedSetupStatic()
         refreshSystemPermissions()
+
+        appActiveObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refreshSystemPermissions()
+        }
+    }
+
+    deinit {
+        if let observer = appActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     var hasSystemPermissionsGranted: Bool {
@@ -177,19 +193,23 @@ class GateService: ObservableObject {
         }
 
         let requested = missingSystemPermissions.map { $0.title }.joined(separator: ", ")
-        appendLog("Opening macOS settings for: \(requested).")
+        appendLog("Requesting macOS permissions: \(requested).")
 
         for permission in missingSystemPermissions {
-            guard let url = URL(string: permission.settingsURL) else { continue }
-            NSWorkspace.shared.open(url)
+            openSystemPermission(permission)
         }
-
-        appendLog("Opened Privacy settings for missing permissions.")
     }
 
     func refreshSystemPermissions() {
+        let previous = systemPermissionStatuses
         systemPermissionStatuses = SystemPermission.allCases.map { permission in
             SystemPermissionStatus(permission: permission, isGranted: isPermissionGranted(permission))
+        }
+        for status in systemPermissionStatuses {
+            let was = previous.first(where: { $0.permission == status.permission })
+            if was == nil || was?.isGranted != status.isGranted {
+                appendLog("\(status.permission.title): \(status.isGranted ? "granted" : "not granted")")
+            }
         }
     }
 
@@ -208,8 +228,11 @@ class GateService: ObservableObject {
     }
 
     func openSystemPermission(_ permission: SystemPermission) {
-        guard let url = URL(string: permission.settingsURL) else { return }
-        NSWorkspace.shared.open(url)
+        switch permission {
+        case .accessibility:
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
+        }
     }
 
     func captureAndSend() {

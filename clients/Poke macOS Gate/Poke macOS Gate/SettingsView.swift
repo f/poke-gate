@@ -44,6 +44,8 @@ struct SettingsView: View {
         }
         .padding(20)
         .frame(width: 430)
+        .onAppear { service.startPermissionPolling() }
+        .onDisappear { service.stopPermissionPolling() }
     }
 
     private var authenticationSection: some View {
