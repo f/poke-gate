@@ -115,14 +115,38 @@ async function main() {
   await connectWithRetry(mcpUrl, token);
 }
 
+function buildAccessModeMessage(mode) {
+  switch (mode) {
+    case "limited":
+      return (
+        "Access mode: Limited. " +
+        "You can read files, list directories, and run safe read-only commands (ls, cat, grep, curl, jq…). " +
+        "You cannot write files, take screenshots, or run other commands."
+      );
+    case "sandbox":
+      return (
+        "Access mode: Sandbox. " +
+        "You can read files, list directories, and run commands like brew, node, python, ffmpeg, curl, and more. " +
+        "File writes are restricted to ~/Downloads and /tmp by macOS sandbox. Screenshots are disabled."
+      );
+    default:
+      return (
+        "Access mode: Full. " +
+        "You can run any shell command, read and write files, list directories, take screenshots, and check system info. " +
+        "Risky actions (commands, file writes, screenshots) require user approval in chat before execution."
+      );
+  }
+}
+
 async function notifyPoke(connectionId, token) {
   try {
+    const mode = getPermissionMode();
     const poke = new Poke({ token });
     await poke.sendMessage(
       `Hey! I've connected my computer to you via Poke Gate (tunnel: ${connectionId}). ` +
-      `You can now run commands, read and write files, list directories, take screenshots, and check system info on my machine. ` +
-      `Just use the tools whenever I ask you to do something on my computer.` +
-      `Now reply me with "now I am connected to your computer" but everytime write those replies in most creativev fun way.`
+      `${buildAccessModeMessage(mode)} ` +
+      `Just use the tools whenever I ask you to do something on my computer. ` +
+      `Now reply me with "now I am connected to your computer" but everytime write those replies in most creative fun way.`
     );
     log("Notified Poke agent about connection.");
   } catch (err) {
