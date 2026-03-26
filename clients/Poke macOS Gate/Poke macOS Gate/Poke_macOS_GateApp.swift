@@ -110,177 +110,201 @@ struct PopoverContent: View {
         if !service.hasCompletedSetup {
             SetupView(service: service)
         } else {
-        VStack(spacing: 0) {
-            VStack(spacing: 6) {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(statusColor)
-                        .frame(width: 10, height: 10)
-
-                    Text(statusText)
-                        .font(.system(.body, weight: .medium))
-
-                    Spacer()
-                }
-
-                if service.status == .connected {
-                    Text("This machine is accessible via Poke. Ask your Poke to run commands or read files.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else if service.status == .starting {
-                    Text("Establishing connection…")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else if service.status == .error {
-                    Text("Check Logs for details.")
-                        .font(.caption)
-                        .foregroundStyle(.red.opacity(0.8))
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 10) {
+                statusSection
+                recentActivitySection
+                accessModeSection
+                actionsSection
+                footerSection
+            }
+            .frame(width: 320)
+            .padding(10)
+            .onChange(of: service.hasSystemPermissionsGranted) { _, granted in
+                if granted && pendingFullMode {
+                    pendingFullMode = false
+                    service.setPermissionMode(.full)
                 }
             }
-            .padding(12)
+        }
+    }
 
-            Divider()
+    private var statusSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 10, height: 10)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Recent activity")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .textCase(.uppercase)
-
-                if service.terminalPreviews.isEmpty {
-                    Text("No activity yet")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(Array(service.terminalPreviews.suffix(4).enumerated()), id: \.element.id) { _, entry in
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(entry.exitCode == 0 ? Color.green : (entry.exitCode == nil ? Color.gray : Color.red))
-                                .frame(width: 5, height: 5)
-                            Text("$ \(entry.command)")
-                                .font(.system(size: 9, design: .monospaced))
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Access mode")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .textCase(.uppercase)
-                    Spacer()
-                    Text(service.permissionMode.title)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack(spacing: 6) {
-                    ForEach(GateService.PermissionMode.allCases) { mode in
-                        let isActive = service.permissionMode == mode || (mode == .full && pendingFullMode)
-                        Button {
-                            handleModeSelection(mode)
-                        } label: {
-                            Text(modeChipTitle(mode))
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(isActive ? .white : .secondary)
-                                .padding(.vertical, 5)
-                                .padding(.horizontal, 8)
-                                .background(isActive ? Color.accentColor : Color.secondary.opacity(0.14))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                if service.permissionMode == .full || pendingFullMode {
-                    AccessibilityPermissionView(service: service)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-
-            Divider()
-
-            HStack(spacing: 12) {
-                ActionButton(icon: "text.alignleft", label: "Logs") {
-                    NSApp.activate(ignoringOtherApps: true)
-                    openWindow(id: "logs")
-                }
-
-                ActionButton(icon: "bolt.fill", label: "Agents") {
-                    NSApp.activate(ignoringOtherApps: true)
-                    openWindow(id: "agents")
-                }
-
-                ActionButton(icon: "gearshape", label: "Settings") {
-                    NSApp.activate(ignoringOtherApps: true)
-                    openWindow(id: "settings")
-                }
-
-                if service.status == .connected || service.status == .starting || service.status == .disconnected {
-                    ActionButton(icon: "arrow.counterclockwise", label: "Restart") {
-                        service.restart()
-                    }
-                } else {
-                    ActionButton(icon: "play.fill", label: "Start") {
-                        service.start()
-                    }
-                }
+                Text(statusText)
+                    .font(.system(.body, weight: .medium))
 
                 Spacer()
+            }
 
-                ActionButton(icon: "xmark.circle", label: "Quit", tint: .secondary) {
-                    service.stop()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        NSApp.terminate(nil)
+            statusMessage
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .macPanelStyle(.neutral, cornerRadius: 12)
+    }
+
+    @ViewBuilder
+    private var statusMessage: some View {
+        switch service.status {
+        case .connected:
+            Text("This machine is accessible via Poke. Ask your Poke to run commands or read files.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        case .starting:
+            Text("Establishing connection…")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        case .error:
+            Text("Check Logs for details.")
+                .font(.caption)
+                .foregroundStyle(.red.opacity(0.8))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        case .disconnected, .stopped:
+            EmptyView()
+        }
+    }
+
+    private var recentActivitySection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            sectionTitle("Recent activity")
+
+            if service.terminalPreviews.isEmpty {
+                Text("No activity yet")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(Array(service.terminalPreviews.suffix(4).enumerated()), id: \.element.id) { _, entry in
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(entry.exitCode == 0 ? Color.green : (entry.exitCode == nil ? Color.gray : Color.red))
+                            .frame(width: 5, height: 5)
+                        Text("$ \(entry.command)")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                 }
             }
-            .padding(12)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .macPanelStyle(.neutral, cornerRadius: 12)
+    }
 
-            Divider()
-
+    private var accessModeSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Button {
-                    NSApp.activate(ignoringOtherApps: true)
-                    openWindow(id: "about")
-                } label: {
-                    Text(appVersionText)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-
+                sectionTitle("Access mode")
                 Spacer()
-
-                Text("Not affiliated with Poke")
+                Text(service.permissionMode.title)
                     .font(.caption2)
-                    .foregroundStyle(.quaternary)
+                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-        }
-        .frame(width: 320)
-        .onChange(of: service.hasSystemPermissionsGranted) { _, granted in
-            if granted && pendingFullMode {
-                pendingFullMode = false
-                service.setPermissionMode(.full)
+
+            HStack(spacing: 6) {
+                ForEach(GateService.PermissionMode.allCases) { mode in
+                    let isActive = service.permissionMode == mode || (mode == .full && pendingFullMode)
+                    Button {
+                        handleModeSelection(mode)
+                    } label: {
+                        Text(modeChipTitle(mode))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(isActive ? .white : .secondary)
+                            .padding(.vertical, 5)
+                            .padding(.horizontal, 8)
+                            .background(isActive ? MacVisualStyle.chipActiveFill : MacVisualStyle.chipInactiveFill)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if service.permissionMode == .full || pendingFullMode {
+                AccessibilityPermissionView(service: service)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .macPanelStyle(.neutral, cornerRadius: 12)
+    }
+
+    private var actionsSection: some View {
+        HStack(spacing: 12) {
+            ActionButton(icon: "text.alignleft", label: "Logs") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "logs")
+            }
+
+            ActionButton(icon: "bolt.fill", label: "Agents") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "agents")
+            }
+
+            ActionButton(icon: "gearshape", label: "Settings") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "settings")
+            }
+
+            if service.status == .connected || service.status == .starting || service.status == .disconnected {
+                ActionButton(icon: "arrow.counterclockwise", label: "Restart") {
+                    service.restart()
+                }
+            } else {
+                ActionButton(icon: "play.fill", label: "Start") {
+                    service.start()
+                }
+            }
+
+            Spacer()
+
+            ActionButton(icon: "xmark.circle", label: "Quit", tint: .secondary) {
+                service.stop()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    NSApp.terminate(nil)
+                }
+            }
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .macPanelStyle(.neutral, cornerRadius: 12)
+    }
+
+    private var footerSection: some View {
+        HStack {
+            Button {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "about")
+            } label: {
+                Text(appVersionText)
+                    .font(.caption2)
+                    .foregroundStyle(MacVisualStyle.sectionTitleColor)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Text("Not affiliated with Poke")
+                .font(.caption2)
+                .foregroundStyle(MacVisualStyle.sectionTitleColor.opacity(0.7))
+        }
+        .padding(.horizontal, 6)
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2)
+            .foregroundStyle(MacVisualStyle.sectionTitleColor)
+            .textCase(.uppercase)
+            .tracking(0.5)
     }
 
     private var statusText: String {

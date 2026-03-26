@@ -52,14 +52,7 @@ struct AccessibilityPermissionView: View {
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.primary.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(granted ? Color.green.opacity(0.25) : Color.primary.opacity(0.08), lineWidth: 1)
-        )
+        .macPanelStyle(granted ? .success : .warning, cornerRadius: 12)
         .animation(.easeInOut(duration: 0.2), value: granted)
     }
 }

@@ -15,7 +15,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("GENERAL")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(MacVisualStyle.sectionTitleColor)
                     .textCase(.uppercase)
                     .tracking(0.5)
 
@@ -67,8 +67,7 @@ struct SettingsView: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.quaternary.opacity(0.5))
-            .cornerRadius(8)
+            .macPanelStyle(.neutral, cornerRadius: 8)
 
             if !service.hasPokeLoginCredentials {
                 Button {
@@ -125,12 +124,7 @@ struct SettingsView: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(service.permissionMode == mode ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.04))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(service.permissionMode == mode ? Color.accentColor.opacity(0.35) : .clear, lineWidth: 1)
-            )
-            .cornerRadius(10)
+            .macPanelStyle(service.permissionMode == mode ? .selected : .neutral)
         }
         .buttonStyle(.plain)
     }
@@ -158,15 +152,14 @@ struct SettingsView: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.quaternary.opacity(0.5))
-            .cornerRadius(8)
+            .macPanelStyle(.neutral, cornerRadius: 8)
         }
     }
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
             .font(.caption2)
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(MacVisualStyle.sectionTitleColor)
             .textCase(.uppercase)
             .tracking(0.5)
     }

@@ -36,7 +36,7 @@ struct SetupView: View {
             ForEach(Array(Step.allCases.enumerated()), id: \.offset) { index, s in
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(s == step ? Color.accentColor : (isCompleted(s) ? Color.accentColor.opacity(0.5) : Color.secondary.opacity(0.3)))
+                        .fill(s == step ? MacVisualStyle.chipActiveFill : (isCompleted(s) ? Color.accentColor.opacity(0.5) : MacVisualStyle.chipInactiveFill))
                         .frame(width: 6, height: 6)
                     Text(s.label)
                         .font(.caption2)
@@ -44,7 +44,7 @@ struct SetupView: View {
                 }
                 if index < Step.allCases.count - 1 {
                     Rectangle()
-                        .fill(Color.secondary.opacity(0.2))
+                        .fill(MacVisualStyle.progressTrackColor)
                         .frame(height: 1)
                         .frame(maxWidth: .infinity)
                 }
@@ -132,12 +132,7 @@ struct SetupView: View {
                 Spacer()
             }
             .padding(10)
-            .background(selectedMode == mode ? Color.accentColor.opacity(0.1) : Color.primary.opacity(0.04))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(selectedMode == mode ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1)
-            )
-            .cornerRadius(10)
+            .macPanelStyle(selectedMode == mode ? .selected : .neutral)
         }
         .buttonStyle(.plain)
     }

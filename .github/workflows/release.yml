@@ -9,8 +9,44 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    runs-on: macos-15
+  verify:
+    strategy:
+      matrix:
+        os:
+          - macos-15
+          - macos-26
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' | sort -V | tail -1)"
+          if [[ -z "${XCODE_APP:-}" ]]; then
+            echo "Xcode 26 not found on this runner."
+            exit 1
+          fi
+
+          sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -version | grep '^Xcode 26' >/dev/null
+
+      - name: Build app
+        run: |
+          xcodebuild -project "clients/Poke macOS Gate/Poke macOS Gate.xcodeproj" \
+            -scheme "Poke macOS Gate" \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            DEVELOPMENT_TEAM="" \
+            clean build
+
+  release:
+    needs: verify
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,8 +73,17 @@ jobs:
           git commit -m "Bump version to ${{ steps.version.outputs.number }}" || echo "No changes to commit"
           git push origin HEAD:refs/heads/main || echo "Push skipped"
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      - name: Select Xcode 26
+        run: |
+          XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' | sort -V | tail -1)"
+          if [[ -z "${XCODE_APP:-}" ]]; then
+            echo "Xcode 26 not found on this runner."
+            exit 1
+          fi
+
+          sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -version | grep '^Xcode 26' >/dev/null
 
       - name: Build universal app
         run: |

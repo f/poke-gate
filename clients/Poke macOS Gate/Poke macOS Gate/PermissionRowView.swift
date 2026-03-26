@@ -23,14 +23,7 @@ struct PermissionRowView: View {
             statusView
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(isGranted ? Color.green.opacity(0.06) : Color.primary.opacity(0.04))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(isGranted ? Color.green.opacity(0.3) : Color.primary.opacity(0.08), lineWidth: 1)
-        )
+        .macPanelStyle(isGranted ? .success : .neutral)
         .animation(.easeInOut(duration: 0.2), value: isGranted)
     }
 
