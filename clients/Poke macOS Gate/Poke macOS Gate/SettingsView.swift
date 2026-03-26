@@ -1,14 +1,38 @@
 import SwiftUI
+import ServiceManagement
 
 struct SettingsView: View {
     @ObservedObject var service: GateService
     @Environment(\.dismiss) private var dismiss
+    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             authenticationSection
             accessModeSection
             connectionSection
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("GENERAL")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                Toggle("Start Poke Gate on login", isOn: $launchAtLogin)
+                    .font(.subheadline)
+                    .onChange(of: launchAtLogin) { _, newValue in
+                        do {
+                            if newValue {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
+                            }
+                        } catch {
+                            launchAtLogin = !newValue
+                        }
+                    }
+            }
 
             HStack {
                 Spacer()

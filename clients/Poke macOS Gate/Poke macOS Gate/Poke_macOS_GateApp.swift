@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var service: GateService?
@@ -17,7 +18,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct Poke_macOS_GateApp: App {
     @StateObject private var service = GateService()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
     var body: some Scene {
         MenuBarExtra {
             PopoverContent(service: service)
@@ -58,6 +58,37 @@ struct Poke_macOS_GateApp: App {
             AboutView()
         }
         .windowResizability(.contentSize)
+    }
+
+    private func checkLoginItemPrompt() {
+        let dismissed = UserDefaults.standard.bool(forKey: "loginItemPromptDismissed")
+        let alreadyEnabled = SMAppService.mainApp.status == .enabled
+        if dismissed || alreadyEnabled { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            let alert = NSAlert()
+            alert.messageText = "Start on login?"
+            alert.informativeText = "Would you like Poke Gate to start automatically when you log in?"
+            alert.addButton(withTitle: "Enable")
+            alert.addButton(withTitle: "Not now")
+            alert.addButton(withTitle: "Don't ask again")
+            alert.alertStyle = .informational
+
+            NSApp.activate(ignoringOtherApps: true)
+            let response = alert.runModal()
+
+            switch response {
+            case .alertFirstButtonReturn:
+                try? SMAppService.mainApp.register()
+                UserDefaults.standard.set(true, forKey: "loginItemPromptDismissed")
+            case .alertSecondButtonReturn:
+                break
+            case .alertThirdButtonReturn:
+                UserDefaults.standard.set(true, forKey: "loginItemPromptDismissed")
+            default:
+                break
+            }
+        }
     }
 
     private var menuBarIcon: String {
