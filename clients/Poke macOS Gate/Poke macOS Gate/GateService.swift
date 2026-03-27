@@ -308,9 +308,10 @@ class GateService: ObservableObject {
         if hasAPIKey {
             start()
         }
+        checkForUpdate(silent: true)
     }
 
-    func checkForUpdate() {
+    func checkForUpdate(silent: Bool = false) {
         let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
         isCheckingForUpdate = true
         updateCheckResult = nil
@@ -322,7 +323,7 @@ class GateService: ObservableObject {
             defer {
                 Task { @MainActor in
                     self.isCheckingForUpdate = false
-                    if !found {
+                    if !found && !silent {
                         self.updateCheckResult = "You're on the latest version."
                     }
                 }
