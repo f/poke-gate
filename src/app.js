@@ -146,8 +146,8 @@ function buildAccessModeMessage(mode) {
     default:
       return (
         "Access mode: Full. " +
-        "You can run any shell command, read and write files, list directories, take screenshots, and check system info. " +
-        "Use the tools directly whenever needed — no approval required."
+        "You can run any shell command, read files, list directories, take screenshots, and check system info — no approval needed. " +
+        "Only destructive actions (deleting files, rm, write_file) require a one-time approval; after that, everything is auto-approved for the session."
       );
   }
 }

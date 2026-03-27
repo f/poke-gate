@@ -22,6 +22,15 @@ const runCommandLoopState = new Map();
 
 const SAFE_TOOL_NAMES = new Set(["read_file", "read_image", "list_directory", "system_info", "network_speed"]);
 
+const DESTRUCTIVE_COMMAND_PATTERNS = [
+  /\brm\b/i,
+  /\brmdir\b/i,
+  /\bunlink\b/i,
+  /\bmkfs\b/i,
+  /\bdiskutil\s+erase/i,
+  />\s*\//,
+];
+
 const LIMITED_RUN_COMMANDS = new Set([
   "curl", "yt-dlp", "youtube-dl",
   "ls", "pwd", "cat", "grep", "find", "head", "tail", "wc", "sed", "awk",
@@ -268,6 +277,15 @@ function extractExecutable(segment) {
 
 function hasDangerousPattern(commandText) {
   return DANGEROUS_COMMAND_PATTERNS.some((pattern) => pattern.test(commandText));
+}
+
+function isDestructiveInFullMode(name, cleanArgs) {
+  if (name === "write_file") return true;
+  if (name === "run_command") {
+    const cmd = typeof cleanArgs.command === "string" ? cleanArgs.command : "";
+    return DESTRUCTIVE_COMMAND_PATTERNS.some((p) => p.test(cmd));
+  }
+  return false;
 }
 
 function validateRunCommandAgainstAllowlist(commandText, allowlist) {
@@ -565,7 +583,11 @@ function handleToolCall(name, args, context = {}) {
     return blocked;
   }
 
-  if (PERMISSION_MODE !== "full" && permissionService.isRisky(name)) {
+  const needsApproval = PERMISSION_MODE === "full"
+    ? isDestructiveInFullMode(name, cleanArgs)
+    : permissionService.isRisky(name);
+
+  if (needsApproval) {
     const commandText = typeof cleanArgs.command === "string" ? cleanArgs.command : "";
     const alreadyAllowed = sessionAutoApproveAllRisky.has(sessionId) ||
       (commandText && permissionService.isAllowedBySessionPattern(sessionId, commandText));
@@ -581,12 +603,15 @@ function handleToolCall(name, args, context = {}) {
         return buildApprovalResponse(name, cleanArgs, approval);
       }
 
-      if (name === "run_command" && args.remember_in_session === true && commandText) {
-        permissionService.allowPatternForSession(sessionId, commandText);
-      }
-
-      if (args.remember_all_risky === true) {
+      if (PERMISSION_MODE === "full") {
         sessionAutoApproveAllRisky.add(sessionId);
+      } else {
+        if (name === "run_command" && args.remember_in_session === true && commandText) {
+          permissionService.allowPatternForSession(sessionId, commandText);
+        }
+        if (args.remember_all_risky === true) {
+          sessionAutoApproveAllRisky.add(sessionId);
+        }
       }
     }
   }
