@@ -100,6 +100,7 @@ class GateService: ObservableObject {
     @Published var availableUpdate: String? = nil
     @Published var isUpdating = false
     @Published var isCheckingForUpdate = false
+    @Published var updateCheckResult: String? = nil
 
     private var hasAutoStarted = false
     private var process: Process?
@@ -313,16 +314,34 @@ class GateService: ObservableObject {
     func checkForUpdate() {
         let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
         isCheckingForUpdate = true
+        updateCheckResult = nil
 
         Task.detached {
-            defer { Task { @MainActor in self.isCheckingForUpdate = false } }
+            let start = ContinuousClock.now
+            var found = false
+
+            defer {
+                Task { @MainActor in
+                    self.isCheckingForUpdate = false
+                    if !found {
+                        self.updateCheckResult = "You're on the latest version."
+                    }
+                }
+            }
+
             guard let url = URL(string: "https://registry.npmjs.org/poke-gate/latest") else { return }
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let latestVersion = json["version"] as? String else { return }
 
+                let elapsed = ContinuousClock.now - start
+                if elapsed < .seconds(1) {
+                    try await Task.sleep(for: .seconds(1) - elapsed)
+                }
+
                 if Self.isNewer(latestVersion, than: currentVersion) {
+                    found = true
                     await MainActor.run {
                         self.availableUpdate = latestVersion
                         self.appendLog("Update available: v\(latestVersion) (current: v\(currentVersion))")
