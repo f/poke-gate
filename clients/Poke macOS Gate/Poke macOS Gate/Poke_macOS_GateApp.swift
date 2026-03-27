@@ -380,18 +380,18 @@ struct PopoverContent: View {
                 .foregroundStyle(MacVisualStyle.sectionTitleColor.opacity(0.7))
         }
         .padding(.horizontal, 6)
-        .alert("Version Check", isPresented: showUpdateCheckAlert) {
-            Button("OK") { service.updateCheckResult = nil }
-        } message: {
-            Text(service.updateCheckResult ?? "")
+        .onChange(of: service.updateCheckResult) { _, result in
+            guard let message = result else { return }
+            service.updateCheckResult = nil
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Version Check"
+                alert.informativeText = message
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
         }
-    }
-
-    private var showUpdateCheckAlert: Binding<Bool> {
-        Binding(
-            get: { service.updateCheckResult != nil },
-            set: { if !$0 { service.updateCheckResult = nil } }
-        )
     }
 
     private func sectionTitle(_ text: String) -> some View {

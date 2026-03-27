@@ -308,7 +308,6 @@ class GateService: ObservableObject {
         if hasAPIKey {
             start()
         }
-        checkForUpdate()
     }
 
     func checkForUpdate() {
