@@ -373,13 +373,6 @@ struct PopoverContent: View {
                 }
             }
 
-            if let result = service.updateCheckResult {
-                Text(result)
-                    .font(.caption2)
-                    .foregroundStyle(.green)
-                    .transition(.opacity)
-            }
-
             Spacer()
 
             Text("Not affiliated with Poke")
@@ -387,14 +380,18 @@ struct PopoverContent: View {
                 .foregroundStyle(MacVisualStyle.sectionTitleColor.opacity(0.7))
         }
         .padding(.horizontal, 6)
-        .animation(.easeInOut(duration: 0.3), value: service.updateCheckResult)
-        .onChange(of: service.updateCheckResult) { _, result in
-            if result != nil {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    service.updateCheckResult = nil
-                }
-            }
+        .alert("Version Check", isPresented: showUpdateCheckAlert) {
+            Button("OK") { service.updateCheckResult = nil }
+        } message: {
+            Text(service.updateCheckResult ?? "")
         }
+    }
+
+    private var showUpdateCheckAlert: Binding<Bool> {
+        Binding(
+            get: { service.updateCheckResult != nil },
+            set: { if !$0 { service.updateCheckResult = nil } }
+        )
     }
 
     private func sectionTitle(_ text: String) -> some View {
