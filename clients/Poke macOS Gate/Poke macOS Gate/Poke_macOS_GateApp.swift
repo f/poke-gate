@@ -337,8 +337,10 @@ struct PopoverContent: View {
         .macPanelStyle(.neutral, cornerRadius: 12)
     }
 
+    @State private var refreshRotation: Double = 0
+
     private var footerSection: some View {
-        HStack {
+        HStack(spacing: 6) {
             Button {
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "about")
@@ -348,6 +350,28 @@ struct PopoverContent: View {
                     .foregroundStyle(MacVisualStyle.sectionTitleColor)
             }
             .buttonStyle(.plain)
+
+            Button {
+                service.checkForUpdate()
+            } label: {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 9))
+                    .foregroundStyle(MacVisualStyle.sectionTitleColor)
+                    .rotationEffect(.degrees(refreshRotation))
+            }
+            .buttonStyle(.plain)
+            .disabled(service.isCheckingForUpdate)
+            .onChange(of: service.isCheckingForUpdate) { _, checking in
+                if checking {
+                    withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+                        refreshRotation = 360
+                    }
+                } else {
+                    withAnimation(.default) {
+                        refreshRotation = 0
+                    }
+                }
+            }
 
             Spacer()
 

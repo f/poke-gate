@@ -99,6 +99,7 @@ class GateService: ObservableObject {
     @Published var systemPermissionStatuses: [SystemPermissionStatus] = []
     @Published var availableUpdate: String? = nil
     @Published var isUpdating = false
+    @Published var isCheckingForUpdate = false
 
     private var hasAutoStarted = false
     private var process: Process?
@@ -311,8 +312,10 @@ class GateService: ObservableObject {
 
     func checkForUpdate() {
         let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+        isCheckingForUpdate = true
 
         Task.detached {
+            defer { Task { @MainActor in self.isCheckingForUpdate = false } }
             guard let url = URL(string: "https://registry.npmjs.org/poke-gate/latest") else { return }
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
