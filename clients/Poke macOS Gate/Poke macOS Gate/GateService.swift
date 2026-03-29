@@ -737,7 +737,7 @@ class GateService: ObservableObject {
         writeConfig(json)
     }
 
-    private func isPermissionGranted(_ permission: SystemPermission) -> Bool {
+    func isPermissionGranted(_ permission: SystemPermission) -> Bool {
         switch permission {
         case .accessibility:
             if AXIsProcessTrusted() { return true }

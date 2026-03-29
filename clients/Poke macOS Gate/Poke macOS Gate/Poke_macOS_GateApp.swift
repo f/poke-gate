@@ -113,8 +113,8 @@ struct PopoverContent: View {
             }
             .frame(width: 320)
             .padding(10)
-            .onChange(of: service.hasSystemPermissionsGranted) { _, granted in
-                if granted && pendingFullMode {
+            .onChange(of: service.systemPermissionStatuses) { _, _ in
+                if service.isPermissionGranted(.accessibility) && pendingFullMode {
                     pendingFullMode = false
                     service.setPermissionMode(.full)
                 }
@@ -427,7 +427,7 @@ struct PopoverContent: View {
     private func handleModeSelection(_ mode: GateService.PermissionMode) {
         guard mode != service.permissionMode else { return }
 
-        if mode == .full && !service.hasSystemPermissionsGranted {
+        if mode == .full && !service.isPermissionGranted(.accessibility) {
             pendingFullMode = true
             service.openSystemPermission(.accessibility)
         } else {

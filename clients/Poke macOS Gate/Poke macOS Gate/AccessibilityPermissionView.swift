@@ -4,7 +4,7 @@ struct AccessibilityPermissionView: View {
     @ObservedObject var service: GateService
 
     var body: some View {
-        let granted = service.hasSystemPermissionsGranted
+        let granted = service.isPermissionGranted(.accessibility)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
