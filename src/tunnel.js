@@ -1,27 +1,9 @@
 import { PokeTunnel, getToken } from "poke";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
-
-const CONFIG_DIR = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-const STATE_PATH = join(CONFIG_DIR, "poke-gate", "state.json");
+import { loadState, saveState } from "./webhook.js";
 
 function log(msg) {
   const ts = new Date().toISOString().slice(11, 19);
   console.log(`[${ts}] ${msg}`);
-}
-
-function loadState() {
-  try {
-    return JSON.parse(readFileSync(STATE_PATH, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-function saveState(state) {
-  mkdirSync(join(CONFIG_DIR, "poke-gate"), { recursive: true });
-  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
 }
 
 async function cleanupStaleConnections() {
@@ -49,7 +31,8 @@ async function cleanupStaleConnections() {
     } catch {}
   }
 
-  saveState({});
+  const { webhookUrl, webhookToken } = loadState();
+  saveState({ webhookUrl, webhookToken });
 }
 
 export async function startTunnel({ mcpUrl, onEvent }) {
@@ -72,6 +55,7 @@ export async function startTunnel({ mcpUrl, onEvent }) {
     const history = state.connectionHistory || [];
     history.push(info.connectionId);
     saveState({
+      ...state,
       connectionId: info.connectionId,
       connectionHistory: history.slice(-10),
     });

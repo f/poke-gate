@@ -1,7 +1,8 @@
 import { startMcpServer, enableLogging, getPermissionMode } from "./mcp-server.js";
 import { startTunnel } from "./tunnel.js";
 import { startAgentScheduler, stopAgentScheduler } from "./agents.js";
-import { Poke, isLoggedIn, login, getToken } from "poke";
+import { sendToWebhook } from "./webhook.js";
+import { isLoggedIn, login, getToken } from "poke";
 import { execSync } from "node:child_process";
 
 const verbose = process.argv.includes("--verbose") || process.argv.includes("-v");
@@ -67,7 +68,7 @@ async function connectWithRetry(mcpUrl, token) {
               reconnectWatchdog = null;
               log(`Tunnel connected (${data.connectionId})`);
               log("Ready — your Poke agent can now access this machine.");
-              notifyPoke(data.connectionId, token);
+              notifyPoke(data.connectionId);
               startAgentScheduler();
               break;
             case "disconnected":
@@ -153,11 +154,10 @@ function buildAccessModeMessage(mode) {
   }
 }
 
-async function notifyPoke(connectionId, token) {
+async function notifyPoke(connectionId) {
   try {
     const mode = getPermissionMode();
-    const poke = new Poke({ token });
-    await poke.sendMessage(
+    await sendToWebhook(
       `Hey! I've connected my computer to you via Poke Gate (tunnel: ${connectionId}). ` +
       `${buildAccessModeMessage(mode)} ` +
       `Just use the tools whenever I ask you to do something on my computer. ` +
