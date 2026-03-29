@@ -779,23 +779,11 @@ function handleToolCall(name, args, context = {}) {
     case "take_screenshot": {
       logTool(name, cleanArgs);
 
-      return runCommand('open -Ra "Poke macOS Gate" 2>/dev/null', homedir()).then((appCheck) => {
-        if (appCheck.exitCode === 0) {
-          return runCommand('open "poke-gate://screenshot"', homedir()).then(() => {
-            return { content: [{ type: "text", text: "Screenshot captured and sent to Poke via the macOS app." }] };
-          });
+      return runCommand("npx -y poke-gate@latest take-screenshot", homedir(), { permissionMode: "full" }).then((result) => {
+        if (result.exitCode === 0) {
+          return { content: [{ type: "text", text: "Screenshot captured and sent to Poke." }] };
         }
-
-        const ts = new Date().toISOString().replace(/[:.]/g, "-");
-        const dest = cleanArgs.path
-          ? resolve(cleanArgs.path.replace(/^~/, homedir()))
-          : join(homedir(), "Desktop", `screenshot-${ts}.png`);
-        return runCommand(`/usr/sbin/screencapture -x "${dest}"`, homedir()).then((result) => {
-          if (result.exitCode === 0) {
-            return { content: [{ type: "text", text: `Screenshot saved to ${dest}` }] };
-          }
-          return { content: [{ type: "text", text: `Screenshot failed: ${result.stderr || "unknown error"}. Grant Screen Recording permission to Terminal or install the Poke macOS Gate app.` }], isError: true };
-        });
+        return { content: [{ type: "text", text: `Screenshot failed: ${result.stderr || result.stdout || "unknown error"}` }], isError: true };
       });
     }
 

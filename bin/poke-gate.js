@@ -42,6 +42,9 @@ async function main() {
   } else if (args[0] === "download-macos") {
     const { downloadMacOSApp } = await import("../src/download-macos.js");
     await downloadMacOSApp();
+  } else if (args[0] === "take-screenshot") {
+    const { takeScreenshot } = await import("../src/take-screenshot.js");
+    await takeScreenshot();
   } else {
     const mode = parseMode();
     if (mode) {
