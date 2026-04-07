@@ -509,6 +509,17 @@ struct AgentDetailView: View {
                 }
 
                 Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { showOutput.toggle() }
+                } label: {
+                    Image(systemName: "terminal")
+                        .font(.caption)
+                        .foregroundStyle(showOutput ? Color.accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help(showOutput ? "Hide output panel" : "Show output panel")
+                .padding(.leading, 4)
+
+                Button {
                     showOutput = true
                     viewModel.runAgent(agent)
                 } label: {
@@ -576,9 +587,11 @@ struct AgentDetailView: View {
                     AgentOutputPanel(
                         output: viewModel.lastRunOutput,
                         isRunning: viewModel.isRunning,
+                        onClose: {
+                            withAnimation(.easeInOut(duration: 0.15)) { showOutput = false }
+                        },
                         onClear: {
                             viewModel.lastRunOutput = ""
-                            showOutput = false
                         }
                     )
                     .frame(minHeight: 80, idealHeight: 180)
@@ -603,6 +616,7 @@ struct AgentDetailView: View {
 struct AgentOutputPanel: View {
     let output: String
     let isRunning: Bool
+    let onClose: () -> Void
     let onClear: () -> Void
 
     var body: some View {
@@ -639,6 +653,14 @@ struct AgentOutputPanel: View {
                 .help("Copy output")
 
                 Button(action: onClear) {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Clear output")
+
+                Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.caption)
                 }
