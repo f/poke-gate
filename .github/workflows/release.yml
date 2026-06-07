@@ -139,7 +139,10 @@ jobs:
           fi
 
           VERSION_NUM="${VERSION#v}"
-          git clone https://x-access-token:${TAP_REPO_TOKEN_HOMEBREW}@github.com/f/homebrew-tap.git tap
+          if ! git clone https://x-access-token:${TAP_REPO_TOKEN_HOMEBREW}@github.com/f/homebrew-tap.git tap; then
+            echo "::warning::Skipping Homebrew tap update because cloning f/homebrew-tap failed."
+            exit 0
+          fi
           mkdir -p tap/Casks
           cat > tap/Casks/poke-gate.rb << EOF
           cask "poke-gate" do
@@ -170,5 +173,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
+          if git diff --cached --quiet; then
+            echo "Homebrew cask is already up to date."
+            exit 0
+          fi
           git commit -m "Update poke-gate to ${VERSION}"
-          git push
+          if ! git push; then
+            echo "::warning::Skipping Homebrew tap update because pushing to f/homebrew-tap failed."
+            exit 0
+          fi
