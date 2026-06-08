@@ -12,6 +12,7 @@ const COMMAND_TIMEOUT = 30_000;
 const RUN_COMMAND_LOOP_SUPPRESSION_MS = 60_000;
 const PERMISSION_MODE = normalizePermissionMode(process.env.POKE_GATE_PERMISSION_MODE);
 const SANDBOX_EXEC_PATH = "/usr/bin/sandbox-exec";
+const TUNNEL_MCP_PATH_RE = /^\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/mcp$/;
 
 let logEnabled = false;
 
@@ -222,6 +223,11 @@ function extractSessionId(req) {
     return sessionId.trim();
   }
   return "default";
+}
+
+export function normalizeMcpPathname(pathname) {
+  if (pathname === "/mcp" || TUNNEL_MCP_PATH_RE.test(pathname)) return "/mcp";
+  return pathname;
 }
 
 function buildApprovalResponse(name, cleanArgs, approval) {
@@ -879,8 +885,9 @@ export function startMcpServer(port = 0) {
       }
 
       const url = new URL(req.url, "http://localhost");
+      const pathname = normalizeMcpPathname(url.pathname);
 
-      if (url.pathname === "/mcp" && req.method === "GET") {
+      if (pathname === "/mcp" && req.method === "GET") {
         const accept = req.headers.accept || "";
         if (accept.includes("text/event-stream")) {
           writeMcpEventStream(req, res);
@@ -891,7 +898,7 @@ export function startMcpServer(port = 0) {
         return;
       }
 
-      if (url.pathname === "/mcp" && req.method === "POST") {
+      if (pathname === "/mcp" && req.method === "POST") {
         try {
           const body = await readBody(req);
           const parsed = JSON.parse(body);
