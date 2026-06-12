@@ -879,8 +879,9 @@ export function startMcpServer(port = 0) {
       }
 
       const url = new URL(req.url, "http://localhost");
+      const isMcpPath = url.pathname === "/mcp" || /^\/[0-9a-f-]+\/mcp$/i.test(url.pathname);
 
-      if (url.pathname === "/mcp" && req.method === "GET") {
+      if (isMcpPath && req.method === "GET") {
         const accept = req.headers.accept || "";
         if (accept.includes("text/event-stream")) {
           writeMcpEventStream(req, res);
@@ -891,7 +892,7 @@ export function startMcpServer(port = 0) {
         return;
       }
 
-      if (url.pathname === "/mcp" && req.method === "POST") {
+      if (isMcpPath && req.method === "POST") {
         try {
           const body = await readBody(req);
           const parsed = JSON.parse(body);
