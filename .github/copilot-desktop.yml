@@ -1,0 +1,8 @@
+scripts:
+- name: xcode-build
+  command: cd "clients/Poke macOS Gate" && xcodebuild -scheme "Poke macOS Gate" -configuration Debug -destination 'platform=macOS' build | xcpretty || xcodebuild -scheme "Poke macOS Gate" -configuration Debug -destination 'platform=macOS' build
+- name: xcode-run-simulator
+  command: cd "clients/Poke macOS Gate" && xcodebuild -scheme "Poke macOS Gate" -configuration Debug -destination 'platform=macOS' build && APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Poke macOS Gate.app" -type d 2>/dev/null | head -1) && [ -n "$APP_PATH" ] && open "$APP_PATH"
+automation:
+  auto_pr_review: false
+  auto_issue_session: true
