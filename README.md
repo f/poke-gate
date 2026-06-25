@@ -171,6 +171,14 @@ Install or update the macOS app:
 npx poke-gate download-macos
 ```
 
+Disconnect old Poke Gate MCP connections:
+
+```bash
+npx poke-gate disconnect-all
+```
+
+This opens a temporary Chrome/Chromium browser login window, then deletes only MCP connections named `poke-gate`.
+
 Config is stored at `~/.config/poke-gate/config.json`.
 
 ## Agents

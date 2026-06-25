@@ -98,6 +98,22 @@ This command:
 
 The macOS app also checks for updates automatically on startup and shows a banner when a new version is available.
 
+## Disconnect all Poke Gate connections
+
+```bash
+npx poke-gate disconnect-all
+```
+
+Opens a temporary Chrome/Chromium browser window to read your Poke web session, lists your MCP connections, and deletes only connections named `poke-gate`. Other connections are left untouched.
+
+By default, deletes are sent one by one with a 100 ms delay and automatic retry/backoff if Poke returns a rate limit.
+
+```bash
+npx poke-gate disconnect-all --delay 500
+```
+
+If Chrome is not installed in a standard location, set `POKE_GATE_CHROME` to a Chromium-compatible browser executable.
+
 ## Install an agent
 
 ```bash
